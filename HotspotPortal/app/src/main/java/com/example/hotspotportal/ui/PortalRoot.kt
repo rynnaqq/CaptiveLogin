@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Groups
@@ -19,7 +21,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hotspotportal.R
 import com.example.hotspotportal.ui.theme.Ink
 import com.example.hotspotportal.ui.theme.LabelText
+import com.example.hotspotportal.ui.theme.Parallelogram
 import com.example.hotspotportal.ui.theme.PopPink
 import com.example.hotspotportal.ui.theme.White
 import com.example.hotspotportal.ui.theme.brutalPanel
@@ -71,9 +73,14 @@ fun PortalRoot(vm: PortalViewModel = viewModel()) {
  * A flat bar with a hard ink rule on top, replacing M3's NavigationBar.
  *
  * NavigationBar cannot carry this look: it draws its own rounded selection pill
- * and an animated indicator, both of which read as soft Material. The active tab
- * is a pink block with the same hard border and offset shadow as every panel, so
- * the nav is unmistakably part of the same system.
+ * and an animated indicator, both of which read as soft Material.
+ *
+ * The anime comes from three cheap moves that all sit on top of the same hard
+ * border language rather than fighting it: the active plate is skewed into a
+ * parallelogram the way shonen UI panels are, it is drawn larger than its
+ * neighbours so the current tab reads as raised, and the tabs are separated by
+ * full-height ink rules so the bar looks like a comic panel grid instead of a
+ * list.
  */
 @Composable
 private fun BrutalNavBar(current: Tab, onSelect: (Tab) -> Unit) {
@@ -86,10 +93,20 @@ private fun BrutalNavBar(current: Tab, onSelect: (Tab) -> Unit) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+                .height(NAV_BAR_HEIGHT),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Tab.entries.forEach { t ->
+            Tab.entries.forEachIndexed { i, t ->
+                // Manga panel dividers. The outer edges get no rule - the bar's
+                // own top divider already frames it.
+                if (i > 0) {
+                    Box(
+                        Modifier
+                            .width(2.dp)
+                            .height(NAV_BAR_HEIGHT)
+                            .background(Ink),
+                    )
+                }
                 NavItem(
                     tab = t,
                     selected = t == current,
@@ -101,6 +118,15 @@ private fun BrutalNavBar(current: Tab, onSelect: (Tab) -> Unit) {
     }
 }
 
+/**
+ * Tall enough for the plate, the gap and both label lines, so nothing is clipped
+ * and every tab clears the 48dp minimum touch target.
+ */
+private val NAV_BAR_HEIGHT = 68.dp
+
+/** Fixed slot the icon plate is centred in, so labels line up across tabs. */
+private val PLATE_ROW = 32.dp
+
 @Composable
 private fun NavItem(
     tab: Tab,
@@ -111,30 +137,44 @@ private fun NavItem(
     Column(
         modifier = modifier
             .clickable(onClick = onClick)
-            .padding(vertical = 2.dp),
+            .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        // Fixed-height row so every label starts on the same baseline. The active
+        // plate is drawn larger and centred inside it - without this the taller
+        // plate pushed its own label down and the row of labels came out ragged.
         Box(
-            modifier = Modifier
-                .size(width = 42.dp, height = 26.dp)
-                .then(
-                    if (selected) {
-                        Modifier.brutalPanel(fill = PopPink, strokeWidth = 2.dp, lift = 3.dp)
-                    } else {
-                        Modifier
-                    },
-                ),
+            modifier = Modifier.height(PLATE_ROW),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = tab.icon,
-                contentDescription = null,
-                // White on pink is 3.5:1, which clears the 3:1 non-text bar for a
-                // glyph this size. Ink on pink would be 0.2:1 and unreadable.
-                tint = if (selected) White else Ink,
-                modifier = Modifier.size(18.dp),
-            )
+            Box(
+                modifier = Modifier
+                    .width(if (selected) 52.dp else 42.dp)
+                    .height(if (selected) 30.dp else 24.dp)
+                    .then(
+                        if (selected) {
+                            Modifier.brutalPanel(
+                                fill = PopPink,
+                                strokeWidth = 2.dp,
+                                lift = 3.dp,
+                                shape = Parallelogram(LEAN),
+                            )
+                        } else {
+                            Modifier
+                        },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = tab.icon,
+                    contentDescription = null,
+                    // White on pink is 3.5:1, which clears the 3:1 non-text bar for a
+                    // glyph this size. Ink on pink would be 0.2:1 and unreadable.
+                    tint = if (selected) White else Ink,
+                    modifier = Modifier.size(if (selected) 19.dp else 17.dp),
+                )
+            }
         }
         // The screen is ~393dp wide, so each of the five items gets ~78dp.
         // ダッシュボード is 7 glyphs and wraps at labelMedium, which pushed every
@@ -150,3 +190,6 @@ private fun NavItem(
         )
     }
 }
+
+/** tan(9deg) - the lean of the active plate. */
+private const val LEAN = 0.158f

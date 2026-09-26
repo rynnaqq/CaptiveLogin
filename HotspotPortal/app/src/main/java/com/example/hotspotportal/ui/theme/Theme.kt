@@ -25,11 +25,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
 /**
@@ -72,6 +79,33 @@ val Danger = Color(0xFFC62828)
 
 /** How far a panel's shadow block sits from the panel. Shared so it reads as one system. */
 val Lift = 5.dp
+
+/**
+ * A slanted rectangle - the shonen-UI panel shape.
+ *
+ * Compose's `graphicsLayer` scope has no `skewX` at this version, so the lean is
+ * a real Shape instead of a transform. That is better anyway: the fill, the
+ * border and the offset shadow are then all built from one outline and cannot
+ * drift apart.
+ */
+class Parallelogram(private val lean: Float) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val dx = size.width * lean
+        return Outline.Generic(
+            Path().apply {
+                moveTo(dx, 0f)
+                lineTo(size.width, 0f)
+                lineTo(size.width - dx, size.height)
+                lineTo(0f, size.height)
+                close()
+            },
+        )
+    }
+}
 
 private val RimuruColors = lightColorScheme(
     primary = Ocean,
@@ -176,13 +210,25 @@ fun Modifier.brutalPanel(
     stroke: Color = Ink,
     strokeWidth: Dp = 2.dp,
     lift: Dp = Lift,
+    shape: Shape = RectangleShape,
 ): Modifier = this
     .drawBehind {
         val o = lift.toPx()
-        drawRect(color = stroke, topLeft = Offset(o, o), size = size)
+        // The shadow is the same shape, offset - otherwise a non-rectangular
+        // panel would sit on a square block and the mismatch would read as a bug.
+        translate(o, o) {
+            when (val outline = shape.createOutline(size, layoutDirection, this)) {
+                is Outline.Generic -> drawPath(outline.path, stroke)
+                is Outline.Rectangle -> drawRect(stroke, size = size)
+                // Every radius in this app is 0, so a rounded outline cannot
+                // actually occur. Fall back to the bounding rect rather than
+                // dragging in a corner-radius call that would never run.
+                else -> drawRect(stroke, size = size)
+            }
+        }
     }
-    .background(fill)
-    .border(BorderStroke(strokeWidth, stroke), RectangleShape)
+    .background(fill, shape)
+    .border(BorderStroke(strokeWidth, stroke), shape)
 
 /**
  * A label with Japanese as the primary voice and English underneath, small.
