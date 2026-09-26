@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HotspotPortal</string>
+
+    <!-- Navigation -->
+    <string name="tab_dashboard">Dashboard</string>
+    <string name="tab_clients">Clients</string>
+    <string name="tab_users">Users</string>
+    <string name="tab_settings">Settings</string>
+    <string name="tab_logs">Logs</string>
+
+    <!-- Dashboard -->
+    <string name="portal_active">Portal active</string>
+    <string name="portal_inactive">Portal inactive</string>
+    <string name="activate_portal">Activate portal</string>
+    <string name="stop_portal">Stop portal</string>
+    <string name="root_available">Root available</string>
+    <string name="root_missing">Root not available</string>
+    <string name="hotspot_off">Hotspot is off</string>
+    <string name="hotspot_ready">Hotspot ready</string>
+    <string name="connected_devices">Connected devices</string>
+    <string name="logged_in_devices">Logged in</string>
+    <string name="session_summary">%1$s sessions • %2$s idle timeout</string>
+    <string name="iface_label">Interface</string>
+    <string name="gateway_label">Gateway</string>
+    <string name="subnet_label">Subnet</string>
+    <string name="ssid_label">SSID</string>
+    <string name="unknown">Unknown</string>
+    <string name="waiting_hotspot">Waiting for a hotspot interface…</string>
+
+    <!-- Clients -->
+    <string name="clients_empty">No devices seen yet. Turn the hotspot on and connect a client.</string>
+    <string name="state_blocked">Blocked</string>
+    <string name="state_logged_in">Logged in as %1$s</string>
+    <string name="action_authorize">Authorize</string>
+    <string name="action_kick">Kick</string>
+    <string name="action_details">Details</string>
+    <string name="time_remaining">%1$s left</string>
+    <string name="ip_label">IP</string>
+    <string name="mac_label">MAC</string>
+    <string name="hostname_label">Hostname</string>
+    <string name="confirm_kick_title">Kick device</string>
+    <string name="confirm_kick_body">This device loses internet access immediately and the portal reappears.</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+
+    <!-- Users -->
+    <string name="users_empty">No users yet. Create one to hand out hotspot access.</string>
+    <string name="new_user">New user</string>
+    <string name="edit_user">Edit user</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="generate_password">Generate</string>
+    <string name="device_limit">Device limit</string>
+    <string name="expires_at">Expires (optional)</string>
+    <string name="no_expiry">No expiry</string>
+    <string name="note">Note</string>
+    <string name="enabled">Enabled</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="disable">Disable</string>
+    <string name="enable">Enable</string>
+    <string name="copy_credentials">Copy credentials</string>
+    <string name="credentials_copied">Credentials copied</string>
+    <string name="confirm_delete_user_title">Delete user</string>
+    <string name="confirm_delete_user_body">%1$s loses access immediately. Any active session is revoked.</string>
+    <string name="first_user_card_title">Create your first user</string>
+    <string name="first_user_card_body">HotspotPortal ships with no default credentials. Create the account you will hand out to guests.</string>
+
+    <!-- Settings -->
+    <string name="settings_general">General</string>
+    <string name="settings_advanced">Advanced</string>
+    <string name="portal_title">Portal title</string>
+    <string name="portal_welcome">Welcome message</string>
+    <string name="portal_footer">Footer text</string>
+    <string name="session_duration">Session duration (hours)</string>
+    <string name="idle_timeout">Idle timeout (minutes)</string>
+    <string name="iface_override">Hotspot interface override</string>
+    <string name="iface_override_hint">Leave empty for auto-detection</string>
+    <string name="auto_start_boot">Activate on boot if hotspot is on</string>
+    <string name="auto_start_boot_summary">Waits for the hotspot, then arms the portal. Requires root.</string>
+    <string name="http_port">HTTP port</string>
+    <string name="dns_port">DNS port</string>
+    <string name="tls_port">TLS resetter port</string>
+    <string name="debug_logging">Verbose debug logging</string>
+    <string name="reset_all_rules">Flush and rebuild all rules</string>
+    <string name="theme_system">Follow system</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+
+    <!-- Logs -->
+    <string name="logs_empty">No events recorded yet.</string>
+    <string name="copy_logs">Copy</string>
+    <string name="clear_logs">Clear</string>
+    <string name="logs_copied">Logs copied to clipboard</string>
+
+    <!-- Notification -->
+    <string name="notif_channel_name">Portal status</string>
+    <string name="notif_channel_desc">Shows whether the captive portal is armed</string>
+    <string name="notif_title">HotspotPortal</string>
+    <string name="notif_text">Portal active • %1$d devices • tap to open</string>
+    <string name="notif_text_idle">Portal active • no devices • tap to open</string>
+    <string name="notif_stop">Stop</string>
+
+    <!-- Errors -->
+    <string name="err_no_root">No root available. HotspotPortal cannot install firewall rules without root.</string>
+    <string name="err_no_iptables">iptables is not available on this device. Install a Magisk iptables/busybox module.</string>
+    <string name="err_no_hotspot">No hotspot interface detected. Turn the hotspot on and try again.</string>
+    <string name="err_setup_failed">Portal setup failed: %1$s. All partial rules were removed.</string>
+    <string name="err_teardown">Cleanup failed: %1$s</string>
+
+    <!-- Portal page (served to guests) -->
+    <string name="portal_signin">Sign in</string>
+    <string name="portal_connected">Connected ✓</string>
+    <string name="portal_connected_body">You are online. This window will close automatically.</string>
+    <string name="portal_invalid">Invalid username or password</string>
+    <string name="portal_locked">Too many failed attempts. Try again in %1$s.</string>
+    <string name="portal_disabled">This account is disabled</string>
+    <string name="portal_expired">This account has expired</string>
+    <string name="portal_limit">Device limit reached for this account</string>
+    <string name="portal_signout">Sign out</string>
+    <string name="portal_session_info">Signed in as %1$s • %2$s remaining</string>
+</resources>

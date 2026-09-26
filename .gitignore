@@ -1,0 +1,20 @@
+# Downloaded build toolchain (JDK 17, Gradle 8.9) — ~916 MB, not source.
+.toolchain/
+
+# Android / Gradle build output
+.gradle/
+build/
+*/build/
+app/build/
+captures/
+.cxx/
+.kotlin/
+
+# Local SDK path — machine specific
+local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
