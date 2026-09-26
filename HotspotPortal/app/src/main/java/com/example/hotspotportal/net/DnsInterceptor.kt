@@ -21,10 +21,21 @@ class DnsInterceptor(private val gatewayProvider: () -> ByteArray?) {
     private var socket: DatagramSocket? = null
     private var pool = Executors.newFixedThreadPool(2)
 
+    /**
+     * Binds on the caller's thread, not inside the worker: a bind failure must
+     * propagate so the service can refuse to arm, rather than being logged from
+     * a background thread while the portal reports itself active with no
+     * DNS responder - every client probe would then time out.
+     */
     fun start(port: Int = DEFAULT_DNS_PORT) {
         if (!running.compareAndSet(false, true)) return
+        val s = DatagramSocket(null).apply {
+            reuseAddress = true
+            bind(InetSocketAddress("0.0.0.0", port))
+        }
+        socket = s
         pool = Executors.newFixedThreadPool(2)
-        Thread({ loop(port) }, "dns-interceptor").apply { isDaemon = true; start() }
+        Thread({ loop(s) }, "dns-interceptor").apply { isDaemon = true; start() }
     }
 
     fun stop() {
@@ -34,14 +45,7 @@ class DnsInterceptor(private val gatewayProvider: () -> ByteArray?) {
         pool.shutdownNow()
     }
 
-    private fun loop(port: Int) {
-        val s = runCatching { DatagramSocket(null).apply { reuseAddress = true; bind(InetSocketAddress("0.0.0.0", port)) } }
-            .getOrElse {
-                Log.e(TAG, "cannot bind UDP $port", it)
-                running.set(false)
-                return
-            }
-        socket = s
+    private fun loop(s: DatagramSocket) {
         val buf = ByteArray(2048)
         while (running.get()) {
             val packet = DatagramPacket(buf, buf.size)

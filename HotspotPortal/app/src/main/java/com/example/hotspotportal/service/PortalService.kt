@@ -149,6 +149,13 @@ class PortalService : Service() {
             val started = runCatching {
                 app.eventLog.record("portal_start", "${hotspot.interfaceName} ${hotspot.cidr}")
                 app.firewall.install(hotspot, cfg.httpPort, cfg.dnsPort, cfg.tlsPort)
+                // install() reports per-command results, but the guarantee that
+                // matters is that both jumps are really in the table. Checking
+                // here means a rejected rule surfaces as an error instead of an
+                // "active" portal that blocks nothing.
+                if (!app.firewall.rulesIntact()) {
+                    error("firewall rules did not install")
+                }
                 app.clientMonitor.bind(hotspot.interfaceName)
 
                 val api = LoginApi(
@@ -170,7 +177,12 @@ class PortalService : Service() {
                     isAuthorized = { mac -> sm.isAuthorized(mac) },
                 )
                 server = s
-                PortalServer.start(s, cfg.httpPort)
+                // A dead portal must never be reported as active: without this
+                // check a failed bind left the firewall installed and the UI
+                // claiming success, with no way for a guest to ever log in.
+                if (!PortalServer.start(s, cfg.httpPort)) {
+                    error("cannot bind HTTP on ${cfg.httpPort}")
+                }
             }
 
             if (started.isFailure) {

@@ -8,6 +8,11 @@
       admin side too, which the spec forbids.
     -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Required to open ANY socket, including a ServerSocket bound on the
+         local network. Without it socket() fails with EPERM, so the portal
+         server, DNS responder and TLS resetter cannot start at all. The app
+         still talks to nothing off-device. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

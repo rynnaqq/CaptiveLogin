@@ -76,7 +76,8 @@ class HotspotDetector(
     }
 
     private suspend fun detectViaShell(): HotspotState? {
-        val out = shell.exec(listOf("ip", "-4", "addr", "show")).stdout
+        val r = shell.exec(listOf("ip", "-4", "addr", "show"))
+        val out = r.stdout
         val addrs = parseIfaceAddrs(out)
         val pick = pickByPriority(addrs.keys) ?: return null
         val (ip, prefix) = addrs.getValue(pick)

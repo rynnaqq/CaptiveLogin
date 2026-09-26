@@ -20,20 +20,15 @@ class TlsResetter(private val onReset: (String) -> Unit = {}) {
     private var server: ServerSocket? = null
     private var thread: Thread? = null
 
+    /** Binds on the caller's thread so a failure propagates to the service. */
     fun start(port: Int = DEFAULT_TLS_PORT) {
         if (!running.compareAndSet(false, true)) return
+        val s = ServerSocket().apply {
+            reuseAddress = true
+            bind(InetSocketAddress("0.0.0.0", port))
+        }
+        server = s
         thread = Thread({
-            val s = runCatching {
-                ServerSocket().apply {
-                    reuseAddress = true
-                    bind(InetSocketAddress("0.0.0.0", port))
-                }
-            }.getOrElse {
-                Log.e(TAG, "cannot bind TCP $port", it)
-                running.set(false)
-                return@Thread
-            }
-            server = s
             while (running.get()) {
                 val client: Socket = try {
                     s.accept()
