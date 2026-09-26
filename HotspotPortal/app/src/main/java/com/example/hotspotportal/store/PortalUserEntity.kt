@@ -15,7 +15,10 @@ import androidx.room.PrimaryKey
     indices = [Index(value = ["username_lower"], unique = true)],
 )
 data class PortalUserEntity(
-    @PrimaryKey val id: Long = 0,
+    // autoGenerate is required: without it every row is written with id = 0
+    // and the second account an admin ever creates fails with
+    // "UNIQUE constraint failed: portal_users.id".
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** Stored lower-cased so login lookup is case-insensitive and unique. */
     val username_lower: String,
     /** Original casing, for display. */
