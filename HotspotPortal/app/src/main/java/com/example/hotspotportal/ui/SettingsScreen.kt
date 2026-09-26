@@ -1,6 +1,10 @@
 package com.example.hotspotportal.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -22,11 +25,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
+import com.example.hotspotportal.ui.theme.Ink
+import com.example.hotspotportal.ui.theme.PopPink
+import com.example.hotspotportal.ui.theme.White
+import com.example.hotspotportal.ui.theme.brutalPanel
 
 @Composable
 fun SettingsScreen(vm: PortalViewModel) {
@@ -76,12 +84,27 @@ fun SettingsScreen(vm: PortalViewModel) {
 
 @Composable
 private fun SettingsCard(title: String, content: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleSmall)
-            HorizontalDivider()
-            content()
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .brutalPanel(fill = MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            Modifier
+                .background(PopPink)
+                .border(BorderStroke(2.dp, Ink), RectangleShape)
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+        ) {
+            Text(
+                title.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = White,
+            )
         }
+        HorizontalDivider(thickness = 2.dp, color = Ink)
+        content()
     }
 }
 

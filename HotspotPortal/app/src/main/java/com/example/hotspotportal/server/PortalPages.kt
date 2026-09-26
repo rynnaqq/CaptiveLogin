@@ -14,6 +14,15 @@ data class PortalCopy(
  * route to the internet at this point, so any CDN reference would hang the
  * page. No ES modules, no framework — plain CSS and XHR, and it stays under
  * 100 KB.
+ *
+ * The visual language matches the app: hard ink borders, zero corner radius, a
+ * solid offset block instead of a blurred shadow, halftone dots behind the card.
+ *
+ * The accent colours are rationed for contrast, not taste. White on the pop pink
+ * is only 3.5:1, which fails AA for the 16px sign-in label, so pink carries no
+ * text at all here — it is the decorative strip. The button is ocean blue, which
+ * clears 4.9:1 against white at any size, and the katakana chip is lemon, which
+ * clears 13.8:1 against ink at any size.
  */
 object PortalPages {
 
@@ -22,7 +31,7 @@ object PortalPages {
         val body = if (signedInAs != null) {
             connectedBody(signedInAs)
         } else {
-            formBody(copy.welcome, error)
+            formBody(copy.title, copy.welcome, error)
         }
         return """<!doctype html>
 <html lang="en"><head>
@@ -32,25 +41,35 @@ object PortalPages {
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-background:linear-gradient(180deg,#0077B6 0%,#023E8A 100%);color:#023E8A;
+color:#0A0A0A;background-color:#0077B6;
+background-image:radial-gradient(#023E8A 1.6px,transparent 1.6px);background-size:14px 14px;
 display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}
-.card{width:100%;max-width:380px;background:#fff;border-radius:20px;padding:26px 22px 22px;
-box-shadow:0 18px 40px rgba(2,62,138,.28)}
-.mark{display:block;width:104px;height:104px;margin:0 auto 14px;border-radius:50%;
-background:#E6F4FB;object-fit:cover}
-h1{font-size:22px;font-weight:700;margin:0 0 6px;text-align:center;color:#023E8A}
-p.w{color:#3f5f80;font-size:14px;margin:0 0 20px;line-height:1.5;text-align:center}
-label{display:block;font-size:11px;color:#5b7a9c;margin:0 0 6px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
-input{width:100%;padding:13px 14px;margin-bottom:14px;border-radius:12px;border:1.5px solid #cfe4f2;
-background:#F6FAFD;color:#023E8A;font-size:16px}
-input:focus{outline:2px solid #0077B6;outline-offset:1px;border-color:#0077B6;background:#fff}
-button{width:100%;padding:15px;border:0;border-radius:12px;background:#0077B6;color:#fff;
-font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 6px 16px rgba(0,119,182,.32)}
-button:disabled{opacity:.55}
-.err{color:#C62828;font-size:14px;margin:0 0 12px;text-align:center}
-.ok{color:#0077B6;font-size:20px;font-weight:700;margin:0 0 8px;text-align:center}
-.hint{color:#7d97b3;font-size:12px;margin-top:18px;line-height:1.5;text-align:center}
-.foot{color:rgba(255,255,255,.85);font-size:12px;margin-top:22px;text-align:center}
+.card{width:100%;max-width:400px;background:#fff;border:3px solid #0A0A0A;
+box-shadow:8px 8px 0 #0A0A0A;padding:0 20px 20px}
+.strip{height:12px;background:#FF2D95;border-bottom:3px solid #0A0A0A;margin:0 -20px 18px}
+.mark{display:block;width:96px;height:96px;margin:0 auto 14px;border:3px solid #0A0A0A}
+h1{font-size:23px;font-weight:900;margin:0 0 10px;text-align:center;letter-spacing:-.5px}
+.chipwrap{text-align:center;margin:0 0 14px}
+.chip{display:inline-block;background:#FFD400;border:3px solid #0A0A0A;color:#0A0A0A;
+font-size:12px;font-weight:800;letter-spacing:.14em;padding:4px 12px}
+p.w{color:#33475B;font-size:14px;margin:0 0 18px;line-height:1.5;text-align:center}
+label{display:block;font-size:11px;color:#0A0A0A;margin:0 0 6px;text-transform:uppercase;
+letter-spacing:.09em;font-weight:800}
+input{width:100%;padding:13px 12px;margin-bottom:14px;border:3px solid #0A0A0A;border-radius:0;
+background:#F6FAFD;color:#0A0A0A;font-size:16px}
+input:focus{outline:0;background:#fff;box-shadow:4px 4px 0 #0A0A0A}
+button{width:100%;padding:16px;border:3px solid #0A0A0A;border-radius:0;background:#0077B6;color:#fff;
+font-size:16px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;
+box-shadow:6px 6px 0 #0A0A0A}
+button:active{box-shadow:2px 2px 0 #0A0A0A;transform:translate(4px,4px)}
+button:disabled{opacity:.5}
+.err{background:#FFD400;border:3px solid #0A0A0A;color:#0A0A0A;font-size:14px;font-weight:700;
+margin:0 0 14px;padding:10px 12px}
+.ok{background:#0077B6;color:#fff;border:3px solid #0A0A0A;box-shadow:6px 6px 0 #0A0A0A;
+font-size:20px;font-weight:900;letter-spacing:.06em;margin:0 0 16px;padding:14px;text-align:center}
+.hint{color:#4A5D6E;font-size:12px;margin-top:18px;line-height:1.5;text-align:center}
+.foot{color:#fff;font-size:12px;font-weight:700;margin-top:20px;text-align:center;
+border-top:3px solid #0A0A0A;padding-top:12px}
 </style></head>
 <body><div class="card">$body<div class="foot">${esc(copy.footer)}</div></div>
 <script>
@@ -74,7 +93,7 @@ function post(){
       // Hit the OS's own connectivity check so its portal window closes
       // itself without the guest doing anything.
       var w=document.getElementById('formwrap');
-      w.innerHTML='<p class="ok">Connected</p><p class="w">You are online. This window will close automatically.</p>';
+      w.innerHTML='<p class="ok">CONNECTED</p><p class="w">You are online. This window will close automatically.</p>';
       var i=document.createElement('iframe');
       i.style.cssText='display:none';i.src=uaPath();
       document.body.appendChild(i);
@@ -97,9 +116,12 @@ document.addEventListener('DOMContentLoaded',function(){
 </body></html>"""
     }
 
-    private fun formBody(welcome: String, error: String) = """
+    private fun formBody(title: String, welcome: String, error: String) = """
 <div id="formwrap">
-<img class="mark" src="/logo.png" width="104" height="104" alt="">
+<div class="strip"></div>
+<img class="mark" src="/logo.png" width="96" height="96" alt="">
+<h1>${esc(title)}</h1>
+<div class="chipwrap"><span class="chip">ログイン</span></div>
 <p class="w">${esc(welcome)}</p>
 <div id="err" role="alert">$error</div>
 <form id="f" autocomplete="on">
@@ -114,10 +136,13 @@ document.addEventListener('DOMContentLoaded',function(){
 """
 
     private fun connectedBody(user: String) = """
-<img class="mark" src="/logo.png" width="104" height="104" alt="">
-<div class="ok">Connected</div>
+<div id="formwrap">
+<div class="strip"></div>
+<img class="mark" src="/logo.png" width="96" height="96" alt="">
+<p class="ok">CONNECTED</p>
 <p class="w">Signed in as <strong>${esc(user)}</strong>. This window will close automatically.</p>
 <iframe style="display:none" src="/generate_204"></iframe>
+</div>
 """
 
     /** Every guest-visible string goes through here — the form reflects values. */

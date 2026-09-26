@@ -3,7 +3,11 @@ package com.example.hotspotportal.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +39,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
 import com.example.hotspotportal.store.PortalUserEntity
+import com.example.hotspotportal.ui.theme.BrutalButton
+import com.example.hotspotportal.ui.theme.Danger
+import com.example.hotspotportal.ui.theme.Ink
+import com.example.hotspotportal.ui.theme.Ocean
+import com.example.hotspotportal.ui.theme.PanelTint
+import com.example.hotspotportal.ui.theme.PopPink
+import com.example.hotspotportal.ui.theme.White
+import com.example.hotspotportal.ui.theme.brutalPanel
 
 @Composable
 fun UsersScreen(vm: PortalViewModel) {
@@ -48,32 +60,44 @@ fun UsersScreen(vm: PortalViewModel) {
     // First-run card: the app ships with no credentials at all.
     if (users.isEmpty()) {
         Column(
-            Modifier.fillMaxSize().padding(24.dp),
+            Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        stringResource(R.string.first_user_card_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        stringResource(R.string.first_user_card_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Button(onClick = { creating = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.new_user))
-                    }
-                }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .brutalPanel(fill = PanelTint)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(R.string.first_user_card_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Ink,
+                )
+                Text(
+                    stringResource(R.string.first_user_card_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Ink,
+                )
+                BrutalButton(
+                    text = stringResource(R.string.new_user),
+                    onClick = { creating = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    fill = PopPink,
+                    contentColor = White,
+                )
             }
         }
     } else {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Button(onClick = { creating = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.new_user))
-            }
+            BrutalButton(
+                text = stringResource(R.string.new_user),
+                onClick = { creating = true },
+                modifier = Modifier.fillMaxWidth(),
+                fill = PopPink,
+                contentColor = White,
+            )
             TextButton(onClick = { verifying = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.verify_credentials))
             }
@@ -151,30 +175,46 @@ private fun UserRow(
     onDelete: () -> Unit,
     onCopy: () -> Unit,
 ) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(user.username, fontWeight = FontWeight.SemiBold)
-                Switch(checked = user.enabled, onCheckedChange = { onToggle() })
-            }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .brutalPanel(fill = White)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(user.username, style = MaterialTheme.typography.titleMedium, color = Ink)
+            Switch(checked = user.enabled, onCheckedChange = { onToggle() })
+        }
+        Box(
+            Modifier
+                .background(if (user.enabled) Ocean else Danger)
+                .border(BorderStroke(2.dp, Ink), RectangleShape)
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+        ) {
             Text(
-                buildString {
-                    append("limit ${user.deviceLimit}")
-                    if (user.expired) append(" • expired")
-                    if (user.note.isNotBlank()) append(" • ${user.note}")
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(if (user.enabled) R.string.enabled else R.string.disable).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = White,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = onEdit) { Text(stringResource(R.string.edit_user)) }
-                TextButton(onClick = onCopy) { Text(stringResource(R.string.copy_credentials)) }
-                TextButton(onClick = onDelete) { Text(stringResource(R.string.delete)) }
-            }
+        }
+        Text(
+            buildString {
+                append("limit ${user.deviceLimit}")
+                if (user.expired) append(" • expired")
+                if (user.note.isNotBlank()) append(" • ${user.note}")
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = Ink,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = onEdit) { Text(stringResource(R.string.edit_user)) }
+            TextButton(onClick = onCopy) { Text(stringResource(R.string.copy_credentials)) }
+            TextButton(onClick = onDelete) { Text(stringResource(R.string.delete), color = Danger) }
         }
     }
 }
