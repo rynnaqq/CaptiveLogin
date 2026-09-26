@@ -79,9 +79,7 @@ class PortalServer(
     }
 
     private fun respondLogin(session: IHTTPSession): Response {
-        val parms = HashMap<String, String>()
-        runCatching { session.parseBody(parms) }
-            .onFailure { android.util.Log.i("ReqDiag", "parseBody failed: ${it.message}") }
+        val parms = readFormBody(session)
         val username = parms["username"].orEmpty()
         val password = parms["password"].orEmpty()
         android.util.Log.i("ReqDiag", "login parsed username='$username' passwordLen=${password.length}")
@@ -98,8 +96,46 @@ class PortalServer(
         return respond(result)
     }
 
-    private fun respondLogout(session: IHTTPSession): Response {
-        val mac = clientMac(session)
+    /**
+     * Reads an `application/x-www-form-urlencoded` body.
+     *
+     * NanoHTTPD 2.3.1's own `parseBody` is not usable here. Verified on the
+     * device with a hand-built POST carrying a correct Content-Type and
+     * Content-Length: `getBodySize()` returns the right length, the input
+     * stream is non-null, the content type matches, and the map still comes
+     * back empty - so every sign-in parsed as username='' passwordLen=0 and
+     * the endpoint answered "Username and password are required" no matter
+     * what the guest typed. Reading the stream directly sidesteps it.
+     *
+     * The length comes from Content-Length and is capped, so a bogus or hostile
+     * header cannot make the app allocate without bound.
+     */
+    private fun readFormBody(session: IHTTPSession): Map<String, String> {
+        val declared = session.headers.entries.firstOrNull { it.key.equals("content-length", true) }
+            ?.value?.trim()?.toIntOrNull() ?: return emptyMap()
+        val length = declared.coerceIn(0, MAX_BODY_BYTES)
+        if (length == 0) return emptyMap()
+
+        val raw = ByteArray(length)
+        var read = 0
+        runCatching {
+            val stream = session.getInputStream()
+            while (read < length) {
+                val n = stream.read(raw, read, length - read)
+                if (n <= 0) break
+                read += n
+            }
+        }
+        if (read == 0) {
+            android.util.Log.i("ReqDiag", "body read 0 of $length bytes")
+            return emptyMap()
+        }
+
+        val text = String(raw, 0, read, Charsets.UTF_8)
+        return parseUrlEncoded(text)
+    }
+
+    private fun respondLogout(session: IHTTPSession): Response {        val mac = clientMac(session)
             ?: return respond(ApiResponse.Err(400, """{"status":"unknown_device"}"""))
         runBlocking { withTimeoutOrNull(LOGIN_TIMEOUT_MS) { loginApi.logout(mac) } }
         return respond(ApiResponse.Ok("""{"status":"ok"}"""))
@@ -149,6 +185,31 @@ class PortalServer(
         private const val HTML = "text/html; charset=utf-8"
         private const val LOGIN_TIMEOUT_MS = 10_000L
         private const val MAC_LOOKUP_TIMEOUT_MS = 2_000L
+        private const val MAX_BODY_BYTES = 8 * 1024
+
+        /** Percent-decoding, and "+" as a space, per the form-urlencoded rules. */
+        private fun urlDecode(s: String): String = runCatching {
+            java.net.URLDecoder.decode(s, "UTF-8")
+        }.getOrDefault(s)
+
+        /**
+         * `a=1&b=2` to a map. Malformed pairs are skipped, never fatal.
+         *
+         * The page sends encodeURIComponent, so a generated password containing
+         * reserved characters arrives percent-encoded and has to be decoded
+         * before BCrypt ever sees it.
+         */
+        fun parseUrlEncoded(text: String): Map<String, String> {
+            val parms = LinkedHashMap<String, String>()
+            for (pair in text.split('&')) {
+                if (pair.isEmpty()) continue
+                val eq = pair.indexOf('=')
+                if (eq <= 0) continue
+                parms[urlDecode(pair.substring(0, eq))] = urlDecode(pair.substring(eq + 1))
+            }
+            return parms
+        }
+
 
         fun start(server: PortalServer, port: Int): Boolean = runCatching {
             server.start(SOCKET_READ_TIMEOUT, true)
