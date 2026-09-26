@@ -16,10 +16,51 @@ class FirewallManager(private val shell: ShellRunner) {
     private val allowedV4 = LinkedHashSet<String>()
     private val allowedV6 = LinkedHashSet<String>()
 
+    /**
+     * Resolved command prefix per family. The defaults are what the unit tests
+     * assert; [resolveTools] replaces them when the bare binary is absent, so
+     * every later rule - including teardown - uses the tool that was found.
+     */
+    private var v4Tool = listOf("iptables")
+    private var v6Tool = listOf("ip6tables")
+
     val authorizedMacs: Set<String> get() = allowedV4.toSet()
 
-    suspend fun hasIptables(): Boolean =
-        shell.toolVersion("iptables") != null || shell.exec(listOf("iptables", "-w", "5", "-t", "nat", "-L", "-n")).ok
+    /**
+     * Locates a usable iptables AND ip6tables, or explains what was tried.
+     *
+     * A bare `iptables` in PATH is not a given. Android 10+ dropped the
+     * binaries from most system images, Magisk ships its own copy, and
+     * KernelSU ships none at all - a KernelSU phone with no iptables module has
+     * no `iptables` anywhere, which is spec gotcha 11.10. busybox is the
+     * near-universal fallback and is probed as a two-word prefix.
+     *
+     * Both families are required: without ip6tables the v6 chain cannot be
+     * installed and clients bypass the portal over IPv6 (spec 5.4).
+     *
+     * Returns null on success, or a reason naming every candidate and the fix.
+     */
+    suspend fun resolveTools(): String? {
+        val v4 = probe(V4_CANDIDATES)
+        val v6 = probe(V6_CANDIDATES)
+        if (v4 != null && v6 != null) {
+            v4Tool = v4
+            v6Tool = v6
+            return null
+        }
+        return buildString {
+            if (v4 == null) append("no iptables; tried ${V4_CANDIDATES.joinToString(" ")}. ")
+            if (v6 == null) append("no ip6tables; tried ${V6_CANDIDATES.joinToString(" ")}. ")
+            append("Install an iptables module or a busybox module, then reactivate.")
+        }
+    }
+
+    private suspend fun probe(candidates: List<List<String>>): List<String>? {
+        for (candidate in candidates) {
+            if (shell.exec(candidate + "--version").ok) return candidate
+        }
+        return null
+    }
 
     /**
      * Flushes and rebuilds from scratch every time, so a partially-installed
@@ -92,5 +133,37 @@ class FirewallManager(private val shell: ShellRunner) {
         return run(FirewallCommands.checkV4Jump(iface)).ok && run(FirewallCommands.checkV6Jump(iface)).ok
     }
 
-    private suspend fun run(args: List<String>) = shell.exec(args)
+    /**
+     * Swaps the placeholder binary at index 0 for the tool [resolveTools]
+     * actually found. FirewallCommands always emits a plain `iptables` /
+     * `ip6tables` head, so redirecting here keeps the tested arg arrays intact
+     * while every real command - installs, whitelists and teardown alike - goes
+     * to the resolved binary.
+     */
+    private suspend fun run(args: List<String>) = shell.exec(
+        when (args.firstOrNull()) {
+            "ip6tables" -> v6Tool + args.drop(1)
+            "iptables" -> v4Tool + args.drop(1)
+            else -> args
+        }
+    )
+
+    private companion object {
+        val V4_CANDIDATES = listOf(
+            listOf("iptables"),
+            listOf("/system/bin/iptables"),
+            listOf("/system/sbin/iptables"),
+            listOf("/sbin/iptables"),
+            listOf("/vendor/bin/iptables"),
+            listOf("busybox", "iptables"),
+        )
+        val V6_CANDIDATES = listOf(
+            listOf("ip6tables"),
+            listOf("/system/bin/ip6tables"),
+            listOf("/system/sbin/ip6tables"),
+            listOf("/sbin/ip6tables"),
+            listOf("/vendor/bin/ip6tables"),
+            listOf("busybox", "ip6tables"),
+        )
+    }
 }

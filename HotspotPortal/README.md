@@ -181,12 +181,29 @@ act on a stale answer.
 
 **No root / root check fails**
 Grant the app superuser in Magisk (or KernelSU). The shell is libsu's; no
-manual `su` grant prompt appears inside the app.
+manual `su` grant prompt appears inside the app. A reinstall drops a KernelSU
+grant, so re-grant after every update. The **Logs** tab names the exact reason
+(`no usable su`, `su started but the shell is not uid=0`, …) rather than a bare
+"no root".
 
-**"iptables is not available"**
-Some OEMs strip it. Install a Magisk `iptables` or `busybox` module, then tap
-**Settings → Flush and rebuild all rules**. `iptables --version` in any root
-shell confirms the fix.
+**"no iptables" / "no ip6tables"**
+Android 10+ dropped the binaries from most system images. Magisk ships its own
+`iptables`; **KernelSU ships none at all**, so a KernelSU phone without an
+iptables module genuinely has nothing to run. The app probes, in order,
+`iptables`, `/system/bin`, `/system/sbin`, `/sbin`, `/vendor/bin`, and finally
+`busybox iptables`, and uses the first that answers `--version` — so a busybox
+module alone is enough. The **Logs** tab lists every candidate it tried.
+
+Both families are required: without `ip6tables` the IPv6 chain cannot be
+installed and clients bypass the portal over v6, so the app refuses to arm
+rather than arm half-secured.
+
+Fix on the device: **KernelSU → Modules** → install an `iptables` module (or a
+`busybox` module), then reactivate. Confirm in any root shell:
+
+```sh
+su -c 'iptables --version; ip6tables --version'
+```
 
 **No hotspot interface detected**
 Interface names are OEM-specific. `dumpsys wifi | grep -i tether` in a root

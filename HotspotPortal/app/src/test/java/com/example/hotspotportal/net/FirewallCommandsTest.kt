@@ -1,7 +1,12 @@
 package com.example.hotspotportal.net
 
+import com.example.hotspotportal.root.ShellResult
+import com.example.hotspotportal.root.ShellRunner
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -120,5 +125,48 @@ class FirewallCommandsTest {
             listOf("ip6tables", "-w", "5", "-t", "filter", "-X", "PORTAL_AUTH6"),
             FirewallCommands.deleteV6Chain(),
         )
+    }
+
+    /** Answers `--version` only for the tool names the device actually has. */
+    private class ToolProbeShell(available: Set<String>) : ShellRunner {
+        val commands = mutableListOf<List<String>>()
+        private val available = available
+        override suspend fun isAvailable() = true
+        override suspend fun toolVersion(tool: String) = "1.0"
+        override suspend fun exec(args: List<String>): ShellResult {
+            commands += args
+            if (args.lastOrNull() == "--version") {
+                val tool = args.dropLast(1).joinToString(" ")
+                return if (tool in available) ShellResult(0, "iptables v1.8.7", "") else ShellResult(127, "", "not found")
+            }
+            return ShellResult(0, "", "")
+        }
+    }
+
+    @Test
+    fun `busybox is used when the device has no bare iptables`() = runTest {
+        // KernelSU with no iptables module: only busybox carries the applet.
+        val shell = ToolProbeShell(setOf("busybox iptables", "busybox ip6tables"))
+        val firewall = FirewallManager(shell)
+
+        assertNull(firewall.resolveTools())
+
+        firewall.allowMac("aa:bb:cc:dd:ee:ff")
+        val v4 = shell.commands.first { it.contains("--mac-source") && it.contains("nat") }
+        val v6 = shell.commands.first { it.contains("--mac-source") && it.contains("filter") }
+        assertEquals(listOf("busybox", "iptables"), v4.take(2))
+        assertEquals(listOf("busybox", "ip6tables"), v6.take(2))
+    }
+
+    @Test
+    fun `a missing ip6tables is fatal and says what to install`() = runTest {
+        val firewall = FirewallManager(ToolProbeShell(setOf("iptables")))
+
+        val reason = firewall.resolveTools()
+
+        // v4 alone would let clients walk past the portal over IPv6.
+        assertNotNull(reason)
+        assertTrue(reason!!.contains("ip6tables"))
+        assertTrue(reason.contains("busybox"))
     }
 }

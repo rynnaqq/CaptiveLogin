@@ -62,7 +62,7 @@ class PortalViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshCapabilities() = viewModelScope.launch {
         _dashboard.value = _dashboard.value.copy(
             rootAvailable = portalApp.shell.isAvailable(),
-            iptablesAvailable = portalApp.firewall.hasIptables(),
+            iptablesAvailable = portalApp.firewall.resolveTools() == null,
             portalState = PortalService.instance?.state?.value ?: PortalState.STOPPED,
         )
     }

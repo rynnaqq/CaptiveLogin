@@ -122,8 +122,8 @@ class PortalService : Service() {
             fail("no root", app.shell.lastRootFailure)
             return
         }
-        if (!app.firewall.hasIptables()) {
-            fail("no iptables")
+        app.firewall.resolveTools()?.let {
+            fail("no iptables", it)
             return
         }
 
