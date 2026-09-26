@@ -31,7 +31,7 @@ class DnsCodecTest {
         0x11, 'c'.code.toByte(), 'o'.code.toByte(), 'n'.code.toByte(), 'n'.code.toByte(),
         'e'.code.toByte(), 'c'.code.toByte(), 't'.code.toByte(), 'i'.code.toByte(),
         'v'.code.toByte(), 'i'.code.toByte(), 't'.code.toByte(), 'y'.code.toByte(),
-        '.code.toByte(), 'c'.code.toByte(), 'h'.code.toByte(), 'e'.code.toByte(),
+        'c'.code.toByte(), 'h'.code.toByte(), 'e'.code.toByte(),
         'c'.code.toByte(), 'k'.code.toByte(),
         // "gstatic" — 7 bytes
         0x07, 'g'.code.toByte(), 's'.code.toByte(), 't'.code.toByte(), 'a'.code.toByte(),
