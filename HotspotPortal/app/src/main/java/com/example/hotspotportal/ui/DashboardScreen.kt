@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
 import com.example.hotspotportal.service.PortalState
@@ -283,13 +284,18 @@ private fun StatusRow(jp: String, en: String, ok: Boolean?) {
                     false -> stringResource(R.string.jp_no)
                     null -> "—"
                 },
+                // The OK hand sign rather than the word: it is the gesture the
+                // Japanese side of this app already speaks, and an emoji needs
+                // no asset, no decoder and no dependency. An animated GIF here
+                // would mean Coil plus a binary for a value that changes twice
+                // a day.
                 en = when (ok) {
-                    true -> "OK"
-                    false -> "NO"
-                    null -> "--"
+                    true -> "👌"
+                    false -> "👎"
+                    null -> "❓"
                 },
                 jpStyle = MaterialTheme.typography.labelSmall,
-                enStyle = MaterialTheme.typography.labelSmall,
+                enStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 18.sp),
                 jpColor = if (ok == null) Ink else White,
                 enColor = if (ok == null) Ink else White,
             )
