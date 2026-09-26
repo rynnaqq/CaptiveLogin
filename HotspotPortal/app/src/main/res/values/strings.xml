@@ -50,6 +50,21 @@
     <string name="edit_user">Edit user</string>
     <string name="username">Username</string>
     <string name="password">Password</string>
+
+    <!-- Admin-only credential check. Passwords are stored as BCrypt hashes and
+         can never be displayed, so this reports which half of a credential
+         pair is wrong instead. Never expose this on the portal: distinguishing
+         "no such user" from "wrong password" would let any guest on the LAN
+         enumerate accounts. -->
+    <string name="verify_credentials">Verify credentials</string>
+    <string name="verify_credentials_help">Passwords are stored as one-way BCrypt hashes, so they cannot be shown or recovered — a lost password is replaced, not read back. This checks a username and password pair and tells you which half is wrong.</string>
+    <string name="verify">Check</string>
+    <string name="close">Close</string>
+    <string name="verdict_correct">Correct — this username and password will sign in.</string>
+    <string name="verdict_no_such_user">No user with that username. Check the spelling on the Users list.</string>
+    <string name="verdict_wrong_password">The username exists but the password is wrong.</string>
+    <string name="verdict_disabled">The username and password are correct, but the account is disabled.</string>
+    <string name="verdict_expired">The username and password are correct, but the account has expired.</string>
     <string name="generate_password">Generate</string>
     <string name="device_limit">Device limit</string>
     <string name="expires_at">Expires (optional)</string>

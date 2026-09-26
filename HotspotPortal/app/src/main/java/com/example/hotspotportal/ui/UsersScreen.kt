@@ -20,6 +20,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.example.hotspotportal.auth.CredentialVerdict
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ fun UsersScreen(vm: PortalViewModel) {
     var editing by remember { mutableStateOf<PortalUserEntity?>(null) }
     var creating by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<PortalUserEntity?>(null) }
+    var verifying by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     // First-run card: the app ships with no credentials at all.
@@ -72,6 +74,9 @@ fun UsersScreen(vm: PortalViewModel) {
             Button(onClick = { creating = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.new_user))
             }
+            TextButton(onClick = { verifying = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.verify_credentials))
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(top = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -89,6 +94,13 @@ fun UsersScreen(vm: PortalViewModel) {
                 }
             }
         }
+    }
+
+    if (verifying) {
+        VerifyCredentialsDialog(
+            check = { u, p, done -> vm.checkCredentials(u, p, done) },
+            onDismiss = { verifying = false },
+        )
     }
 
     if (creating) {
@@ -165,6 +177,77 @@ private fun UserRow(
             }
         }
     }
+}
+
+/**
+ * Admin-only credential check.
+ *
+ * A stored password cannot be shown - only its BCrypt hash exists - so this
+ * answers the question that actually matters when a guest cannot get in: is
+ * the username wrong, or the password? The portal's own login form must never
+ * answer this, or the LAN could enumerate accounts.
+ */
+@Composable
+private fun VerifyCredentialsDialog(
+    check: (String, String, (CredentialVerdict) -> Unit) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var verdict by remember { mutableStateOf<CredentialVerdict?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.verify_credentials)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.verify_credentials_help),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it; verdict = null },
+                    label = { Text(stringResource(R.string.username)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it; verdict = null },
+                    label = { Text(stringResource(R.string.password)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                verdict?.let {
+                    Text(
+                        stringResource(
+                            when (it) {
+                                CredentialVerdict.CORRECT -> R.string.verdict_correct
+                                CredentialVerdict.NO_SUCH_USER -> R.string.verdict_no_such_user
+                                CredentialVerdict.WRONG_PASSWORD -> R.string.verdict_wrong_password
+                                CredentialVerdict.DISABLED -> R.string.verdict_disabled
+                                CredentialVerdict.EXPIRED -> R.string.verdict_expired
+                            }
+                        ),
+                        color = if (it == CredentialVerdict.CORRECT) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { check(username.trim(), password) { verdict = it } },
+                enabled = username.isNotBlank() && password.isNotEmpty(),
+            ) { Text(stringResource(R.string.verify)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
+    )
 }
 
 @Composable

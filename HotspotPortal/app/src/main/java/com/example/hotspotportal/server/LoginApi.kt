@@ -32,10 +32,17 @@ class LoginApi(
 
     suspend fun login(username: String, password: String, ip: String, userAgent: String? = null): ApiResponse {
         val mac = macResolver(ip)
-            ?: return ApiResponse.Err(
+        android.util.Log.i("LoginDiag", "POST login user=$username ip=$ip ua=$userAgent mac=$mac")
+        if (mac == null) {
+            // Logged: this path returns a 400 without touching the rate limiter
+            // or emitting an event, so a client the kernel has not learned yet
+            // is otherwise invisible in the Logs tab.
+            onEvent("unknown_device", "login from $ip could not be matched to a MAC")
+            return ApiResponse.Err(
                 400,
                 json(mapOf("status" to "unknown_device", "message" to "Cannot identify this device yet. Reconnect and try again.")),
             )
+        }
 
         if (!rateLimiter.allow(mac)) {
             onEvent("rate_limited", "$username from $ip")

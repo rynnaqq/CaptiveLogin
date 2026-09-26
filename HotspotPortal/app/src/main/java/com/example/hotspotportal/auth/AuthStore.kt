@@ -7,6 +7,17 @@ import org.mindrot.jbcrypt.BCrypt
 /** Why a login attempt failed. Drives the message the guest sees. */
 enum class LoginFailure { INVALID, DISABLED, EXPIRED, DEVICE_LIMIT, LOCKED }
 
+/**
+ * Result of an admin-side credential check.
+ *
+ * Admin-only, and deliberately more precise than [LoginFailure.INVALID]: the
+ * portal's /api/login must never say "no such user", or anyone on the LAN
+ * could enumerate accounts. This is only reachable from the local app UI, where
+ * the person using it already owns every account, and it is the only way to
+ * tell a mistyped username from a mistyped password.
+ */
+enum class CredentialVerdict { CORRECT, NO_SUCH_USER, WRONG_PASSWORD, DISABLED, EXPIRED }
+
 sealed interface LoginResult {
     data class Success(val user: PortalUserEntity) : LoginResult
     data class Failure(val reason: LoginFailure, val remainingAttempts: Int = 0, val retryAfterSeconds: Long = 0) : LoginResult
@@ -56,6 +67,22 @@ class AuthStore(private val userDao: PortalUserDao) {
     suspend fun setPassword(user: PortalUserEntity, newPassword: String) {
         require(newPassword.length >= 4) { "password must be at least 4 characters" }
         userDao.update(user.copy(passwordHash = BCrypt.hashpw(newPassword, BCrypt.gensalt(BCRYPT_COST))))
+    }
+
+    /**
+     * Checks a username/password pair and says which half is wrong.
+     *
+     * Local admin use only - see [CredentialVerdict]. This is also why a stored
+     * password can never be shown: only the BCrypt hash exists, which is the
+     * point of storing a hash. A lost password is replaced, not recovered.
+     */
+    suspend fun diagnose(username: String, password: String): CredentialVerdict {
+        val user = userDao.byUsername(username.trim().lowercase())
+            ?: return CredentialVerdict.NO_SUCH_USER
+        if (!BCrypt.checkpw(password, user.passwordHash)) return CredentialVerdict.WRONG_PASSWORD
+        if (!user.enabled) return CredentialVerdict.DISABLED
+        if (user.expired) return CredentialVerdict.EXPIRED
+        return CredentialVerdict.CORRECT
     }
 
     /** A readable random password for the "Generate" field. */

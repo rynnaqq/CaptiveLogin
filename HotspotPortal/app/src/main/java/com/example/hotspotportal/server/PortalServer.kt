@@ -72,6 +72,7 @@ class PortalServer(
     private fun respondProbe(session: IHTTPSession, path: String): Response {
         val mac = clientMac(session)
         val authorized = mac != null && isAuthorized(mac)
+        android.util.Log.i("ProbeDiag", "probe path=$path ip=${session.remoteIpAddress} mac=$mac authorized=$authorized")
         val r = ProbeRouter.responseFor(path, authorized, PortalPages.portalHtml(copyProvider()))
         return newFixedLengthResponse(statusOf(r.status), r.contentType, r.body).noCache()
     }

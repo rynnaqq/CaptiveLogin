@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hotspotportal.PortalApp
 import com.example.hotspotportal.auth.AuthStore
+import com.example.hotspotportal.auth.CredentialVerdict
 import com.example.hotspotportal.clients.ObservedClient
 import com.example.hotspotportal.clients.groupByDevice
 import com.example.hotspotportal.net.HotspotState
@@ -115,6 +116,19 @@ class PortalViewModel(app: Application) : AndroidViewModel(app) {
             .onSuccess { onDone(true) }
             .onFailure { onDone(false) }
     }
+
+    /**
+     * Admin-only credential check: reports whether the username exists and
+     * whether the password matches, so a guest who cannot get in can be
+     * diagnosed without guessing. Never exposed on the LAN.
+     */
+    fun checkCredentials(username: String, password: String, onDone: (CredentialVerdict) -> Unit) =
+        viewModelScope.launch {
+            onDone(
+                runCatching { portalApp.authStore.diagnose(username, password) }
+                    .getOrDefault(CredentialVerdict.NO_SUCH_USER)
+            )
+        }
 
     fun deleteUser(user: PortalUserEntity) = viewModelScope.launch {
         userDao.delete(user)
