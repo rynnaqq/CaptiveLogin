@@ -71,4 +71,45 @@ class ProbeRouterTest {
         // must be a path the router actually answers.
         assertTrue(ProbeRouter.isProbePath(ProbeRouter.postLoginProbePath("Mozilla/5.0 (Windows NT 10.0; Win64)")))
     }
+
+    /**
+     * The end-to-end contract for a Windows guest, which is the loop that had
+     * no coverage: the UA picked after login, the path the router answers, and
+     * the exact body Windows insists on before it drops the sign-in sheet.
+     * Passing a null UA here is what sent the laptop to /generate_204 forever.
+     */
+    @Test
+    fun `a windows guest gets the exact online body after login`() {
+        val ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        val path = ProbeRouter.postLoginProbePath(ua)
+
+        assertEquals("/connecttest.txt", path)
+        assertTrue(ProbeRouter.isProbePath(path))
+
+        val online = ProbeRouter.responseFor(path, authorized = true, portalHtml = "<html>portal</html>")
+        assertEquals("Microsoft Connect Test", online.body)
+        assertEquals(200, online.status)
+
+        // And the same path must still show the portal while blocked.
+        val blocked = ProbeRouter.responseFor(path, authorized = false, portalHtml = "<html>portal</html>")
+        assertEquals("<html>portal</html>", blocked.body)
+    }
+
+    @Test
+    fun `every post-login probe answers with the online body its OS expects`() {
+        val cases = mapOf(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)" to "Success",
+            "Mozilla/5.0 (Windows NT 10.0; Win64)" to "Microsoft Connect Test",
+            "Dalvik/2.1 (Linux; Android 14)" to "", // 204, empty body
+        )
+        for ((ua, expected) in cases) {
+            val path = ProbeRouter.postLoginProbePath(ua)
+            val res = ProbeRouter.responseFor(path, authorized = true, portalHtml = "x")
+            if (expected.isEmpty()) {
+                assertEquals("204 for $ua", 204, res.status)
+            } else {
+                assertEquals("body for $ua", expected, res.body)
+            }
+        }
+    }
 }

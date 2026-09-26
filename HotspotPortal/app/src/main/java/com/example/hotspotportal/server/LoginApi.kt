@@ -30,7 +30,7 @@ class LoginApi(
     private val onEvent: (String, String) -> Unit = { _, _ -> },
 ) {
 
-    suspend fun login(username: String, password: String, ip: String): ApiResponse {
+    suspend fun login(username: String, password: String, ip: String, userAgent: String? = null): ApiResponse {
         val mac = macResolver(ip)
             ?: return ApiResponse.Err(
                 400,
@@ -87,6 +87,7 @@ class LoginApi(
                 rateLimiter.reset(mac)
                 val token = newToken()
                 val session = sessions.create(mac, user.username, token)
+                onEvent("login_ok", "${user.username} at $mac from $ip")
                 ApiResponse.Ok(
                     body = json(
                         mapOf(
@@ -94,7 +95,12 @@ class LoginApi(
                             "username" to user.username,
                             "expiresAt" to session.expiresAt,
                             "remainingSeconds" to ((session.expiresAt - System.currentTimeMillis()) / 1000),
-                            "nextProbe" to ProbeRouter.postLoginProbePath(null),
+                            // The OS closes its own window only when it sees the
+                            // response it expects, and which probe that is
+                            // depends on the client: Windows never asks
+                            // /generate_204, so passing a null UA here left it
+                            // re-showing the login page forever.
+                            "nextProbe" to ProbeRouter.postLoginProbePath(userAgent),
                         )
                     ),
                     token = token,

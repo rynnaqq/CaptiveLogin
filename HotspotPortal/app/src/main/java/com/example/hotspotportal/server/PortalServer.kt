@@ -86,7 +86,9 @@ class PortalServer(
         }
         val result = runBlocking {
             withTimeoutOrNull(LOGIN_TIMEOUT_MS) {
-                loginApi.login(username, password, session.remoteIpAddress)
+                // NanoHTTPD lower-cases header names. The UA decides which probe
+                // the client is told to hit next so its window closes itself.
+                loginApi.login(username, password, session.remoteIpAddress, session.headers["user-agent"])
             }
         } ?: return respond(ApiResponse.Err(503, """{"status":"busy","message":"Please try again."}"""))
         return respond(result)
