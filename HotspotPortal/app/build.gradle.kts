@@ -1,8 +1,19 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// A fixed signing identity, committed with the project. Android refuses to
+// install an update whose certificate differs from the installed app, and a CI
+// runner has no ~/.android/debug.keystore, so AGP would mint a NEW key on every
+// job. Every CI artifact would then need an uninstall to install, taking the
+// Room user list and DataStore settings with it. One shared key, no uninstalls.
+val keystoreProps = Properties().apply {
+    rootProject.file("keystore/keystore.properties").inputStream().use { load(it) }
 }
 
 android {
@@ -17,9 +28,18 @@ android {
         applicationId = "com.example.hotspotportal"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("portal") {
+            storeFile = rootProject.file("keystore/${keystoreProps.getProperty("storeFile")}")
+            storePassword = keystoreProps.getProperty("storePassword")
+            keyAlias = keystoreProps.getProperty("keyAlias")
+            keyPassword = keystoreProps.getProperty("keyPassword")
+        }
     }
 
     buildTypes {
@@ -27,12 +47,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Debug signing so `./gradlew assembleRelease` produces an installable APK
-            // for on-device testing without a keystore setup step.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("portal")
         }
         debug {
             isMinifyEnabled = false
+            // Same key as release so a debug build can always replace a release
+            // install (and vice versa) without an uninstall.
+            signingConfig = signingConfigs.getByName("portal")
         }
     }
 

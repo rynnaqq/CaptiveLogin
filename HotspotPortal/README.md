@@ -68,7 +68,7 @@ ordinary app no way to do that.
 # from the project root
 ./gradlew assembleDebug        # debug APK
 ./gradlew test                 # the five spec-13 unit tests
-./gradlew assembleRelease      # minified, debug-signed so it is installable
+./gradlew assembleRelease      # minified and installable
 ```
 
 Then install over USB:
@@ -76,6 +76,28 @@ Then install over USB:
 ```bash
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
+
+### Installing updates without uninstalling
+
+Every build — local, debug, release, and the APKs produced by CI — is signed
+with the same committed key in `keystore/`. So `adb install -r` (or tapping the
+new APK on the phone) replaces the installed app in place: your **users,
+passwords, sessions, event log and settings all survive**.
+
+Verify a build's signer at any time:
+
+```bash
+$ANDROID_HOME/build-tools/34.0.0/apksigner verify --print-certs \
+  app/build/outputs/apk/release/app-release.apk | grep SHA-256
+# every build must print e85c6622a9aacc9d16b9682c050bb31b9b27c56db17348bb44a03bb843c3834
+```
+
+> **One-time caveat.** Builds made *before* this change were signed with an
+> auto-generated debug key (CI minted a new one per job), so the version already
+> on your phone has a different certificate. Android refuses to replace an app
+> signed by a different key, so you must uninstall that one copy once. Do it
+> before creating any users you care about — the uninstall clears the database.
+> Every install after that is an in-place update.
 
 `local.properties` must point at your SDK (AGP creates it on first build):
 
