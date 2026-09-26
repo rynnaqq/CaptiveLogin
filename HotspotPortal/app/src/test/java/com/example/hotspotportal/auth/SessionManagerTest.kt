@@ -28,7 +28,6 @@ class SessionManagerTest {
 
     private val shell = RecordingShell()
     private val firewall = FirewallManager(shell)
-    private var now = 1_000_000L
     private val cfg = SessionManager.SessionConfig(durationMillis = 8 * 3600_000L, idleMillis = 30 * 60_000L)
     private val events = mutableListOf<String>()
 
@@ -51,8 +50,13 @@ class SessionManagerTest {
         sm.create("aa:bb:cc:dd:ee:02", "bob", "t2")
         shell.commands.clear()
 
-        now += cfg.durationMillis + 1
-        sm.tick(presentMacs = setOf("aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"), now = now)
+        // Sessions are stamped with real wall-clock time at creation, so the
+        // tick has to jump past their real expiry, not the synthetic `now`.
+        val realNow = System.currentTimeMillis()
+        sm.tick(
+            presentMacs = setOf("aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"),
+            now = realNow + cfg.durationMillis + 1,
+        )
 
         assertTrue(shell.commands.any { it == FirewallCommands.removeMacV4("aa:bb:cc:dd:ee:01") })
         assertTrue(shell.commands.any { it == FirewallCommands.removeMacV6("aa:bb:cc:dd:ee:01") })
@@ -67,16 +71,19 @@ class SessionManagerTest {
         sm.create("aa:bb:cc:dd:ee:01", "alice", "t1")
         shell.commands.clear()
 
+        // Session stamps are real wall-clock time, so drive the tick from
+        // that rather than from the synthetic `now`.
+        val createdAt = System.currentTimeMillis()
+        val pastIdle = createdAt + cfg.idleMillis + 1
+
         // Past the idle window, but the device is still on the network.
-        now += cfg.idleMillis + 1
-        sm.tick(presentMacs = setOf("aa:bb:cc:dd:ee:01"), now = now)
+        sm.tick(presentMacs = setOf("aa:bb:cc:dd:ee:01"), now = pastIdle)
         assertTrue(shell.commands.isEmpty())
         assertTrue(sm.isAuthorized("aa:bb:cc:dd:ee:01"))
 
         // Now it disappears: the full idle window has already passed.
         shell.commands.clear()
-        now += 1
-        sm.tick(presentMacs = emptySet(), now = now)
+        sm.tick(presentMacs = emptySet(), now = pastIdle + 1)
         assertTrue(shell.commands.any { it == FirewallCommands.removeMacV4("aa:bb:cc:dd:ee:01") })
         assertFalse(sm.isAuthorized("aa:bb:cc:dd:ee:01"))
     }

@@ -19,15 +19,24 @@ class DnsCodecTest {
     // two's-complement values or they do not fit a Byte.
     private val gateway = byteArrayOf(192.toByte(), 168.toByte(), 43, 1)
 
-    /** Real `dig` query for connectivitycheck.gstatic.com A, ID 0x1234. */
+    /**
+     * Real `dig` query for connectivitycheck.gstatic.com A, ID 0x1234.
+     *
+     * Label lengths must match the bytes that follow: "connectivitycheck"
+     * is 17 (0x11), "gstatic" is 7 (0x07), "com" is 3.
+     */
     private val aQuery = byteArrayOf(
         0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        // "connectivitycheck" — 17 bytes
         0x11, 'c'.code.toByte(), 'o'.code.toByte(), 'n'.code.toByte(), 'n'.code.toByte(),
         'e'.code.toByte(), 'c'.code.toByte(), 't'.code.toByte(), 'i'.code.toByte(),
         'v'.code.toByte(), 'i'.code.toByte(), 't'.code.toByte(), 'y'.code.toByte(),
-        0x07, 'c'.code.toByte(), 'h'.code.toByte(), 'e'.code.toByte(), 'c'.code.toByte(),
-        'k'.code.toByte(), 0x06, 'g'.code.toByte(), 's'.code.toByte(), 't'.code.toByte(),
-        'a'.code.toByte(), 't'.code.toByte(), 'i'.code.toByte(), 'c'.code.toByte(),
+        '.code.toByte(), 'c'.code.toByte(), 'h'.code.toByte(), 'e'.code.toByte(),
+        'c'.code.toByte(), 'k'.code.toByte(),
+        // "gstatic" — 7 bytes
+        0x07, 'g'.code.toByte(), 's'.code.toByte(), 't'.code.toByte(), 'a'.code.toByte(),
+        't'.code.toByte(), 'i'.code.toByte(), 'c'.code.toByte(),
+        // "com" — 3 bytes
         0x03, 'c'.code.toByte(), 'o'.code.toByte(), 'm'.code.toByte(),
         0x00, 0x00, 0x01, 0x00, 0x01,
     )

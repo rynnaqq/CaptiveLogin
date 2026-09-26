@@ -25,13 +25,20 @@ class FirewallCommandsTest {
         val mac = "aa:bb:cc:dd:ee:ff"
         val insert = FirewallCommands.allowMacV4(mac)
         val remove = FirewallCommands.removeMacV4(mac)
-        // Identical apart from -I -> -D: the rule must match to be deletable.
-        assertEquals(insert.toSet(), remove.toSet())
+
+        // -I/-D sit at index 5; the "1" position argument only exists on insert
+        // because -D takes no position.
+        assertEquals("iptables", insert[0])
         assertEquals("-I", insert[5])
+        assertEquals("PORTAL_AUTH", insert[6])
+        assertEquals("1", insert[7])
+
         assertEquals("-D", remove[5])
-        // The position argument is present on insert and absent on delete.
-        assertEquals("1", insert[6])
-        assertEquals("PORTAL_AUTH", remove[5 + 1])
+        assertEquals("PORTAL_AUTH", remove[6])
+
+        // The rest of the rule must be byte-identical or iptables will not
+        // match the rule when deleting it.
+        assertEquals(insert.drop(8), remove.drop(7))
     }
 
     @Test

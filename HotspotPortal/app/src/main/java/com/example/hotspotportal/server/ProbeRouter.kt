@@ -85,6 +85,9 @@ object ProbeRouter {
             ua.contains("iPhone") || ua.contains("iPad") || ua.contains("Macintosh") || ua.contains("iPod") ->
                 "/hotspot-detect.html"
             ua.contains("Windows") -> "/connecttest.txt"
+            // Android's captive webview UA contains "Linux" too, so it has to
+            // be tested before the desktop-Linux branch.
+            ua.contains("Android") -> "/generate_204"
             ua.contains("Ubuntu") || ua.contains("Linux") -> "/canonical.html"
             else -> "/generate_204"
         }

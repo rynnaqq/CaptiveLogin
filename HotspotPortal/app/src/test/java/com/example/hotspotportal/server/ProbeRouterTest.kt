@@ -1,6 +1,7 @@
 package com.example.hotspotportal.server
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -65,5 +66,9 @@ class ProbeRouterTest {
         assertEquals("/connecttest.txt", ProbeRouter.postLoginProbePath("Mozilla/5.0 (Windows NT 10.0; Win64)"))
         assertEquals("/generate_204", ProbeRouter.postLoginProbePath("Dalvik/2.1 (Linux; Android 14)"))
         assertEquals("/generate_204", ProbeRouter.postLoginProbePath(null))
+
+        // A Windows browser hits its own probe first, so /connecttest.txt
+        // must be a path the router actually answers.
+        assertTrue(ProbeRouter.isProbePath(ProbeRouter.postLoginProbePath("Mozilla/5.0 (Windows NT 10.0; Win64)")))
     }
 }
