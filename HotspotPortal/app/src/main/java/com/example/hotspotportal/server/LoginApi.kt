@@ -32,7 +32,6 @@ class LoginApi(
 
     suspend fun login(username: String, password: String, ip: String, userAgent: String? = null): ApiResponse {
         val mac = macResolver(ip)
-        android.util.Log.i("LoginDiag", "POST login user=$username ip=$ip ua=$userAgent mac=$mac")
         if (mac == null) {
             // Logged: this path returns a 400 without touching the rate limiter
             // or emitting an event, so a client the kernel has not learned yet

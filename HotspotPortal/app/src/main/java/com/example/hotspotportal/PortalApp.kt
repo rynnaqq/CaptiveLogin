@@ -50,6 +50,13 @@ class PortalApp : Application() {
     private val _settingsState = MutableStateFlow(PortalSettings())
     val settingsState: StateFlow<PortalSettings> = _settingsState.asStateFlow()
 
+    /** The sign-in page's artwork, loaded once. Null if the asset is missing. */
+    @Volatile
+    var logo: ByteArray? = null
+        private set
+
+    fun readLogo(): ByteArray? = logo
+
     override fun onCreate() {
         super.onCreate()
         RootShellManager.installDefaultBuilder()
@@ -62,6 +69,12 @@ class PortalApp : Application() {
         eventLog = EventLog(db.logDao(), appScope)
         hotspotDetector = HotspotDetector(shell) { _settingsState.value.ifaceOverride }
         clientMonitor = ClientMonitor(shell)
+
+        // Read the sign-in page artwork once, at startup, so serving it to every
+        // guest is a memory lookup rather than a file read on the HTTP thread.
+        logo = runCatching {
+            resources.openRawResource(R.raw.rimuru_logo).use { it.readBytes() }
+        }.getOrNull()
 
         appScope.launch {
             settings.settings.collect { _settingsState.value = it }

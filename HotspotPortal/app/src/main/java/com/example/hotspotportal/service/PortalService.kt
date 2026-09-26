@@ -178,6 +178,7 @@ class PortalService : Service() {
                     copyProvider = { app.settingsState.value.copy },
                     macResolver = { ip -> app.clientMonitor.macFor(ip) },
                     isAuthorized = { mac -> sm.isAuthorized(mac) },
+                    logoProvider = { app.readLogo() },
                 )
                 server = s
                 // A dead portal must never be reported as active: without this

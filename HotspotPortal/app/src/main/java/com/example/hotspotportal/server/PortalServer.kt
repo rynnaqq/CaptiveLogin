@@ -2,6 +2,7 @@ package com.example.hotspotportal.server
 
 import android.util.Log
 import fi.iki.elonen.NanoHTTPD
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -22,7 +23,18 @@ class PortalServer(
     private val copyProvider: () -> PortalCopy,
     private val macResolver: suspend (ip: String) -> String?,
     private val isAuthorized: (mac: String) -> Boolean,
+    private val logoProvider: () -> ByteArray? = { null },
 ) : NanoHTTPD(port) {
+
+    private val logoCache = AtomicReference<ByteArray?>(null)
+
+    /** Read once: the asset cannot change while the service runs. */
+    private fun logo(): ByteArray? {
+        logoCache.get()?.let { return it }
+        val read = logoProvider()
+        if (read != null) logoCache.compareAndSet(null, read)
+        return logoCache.get()
+    }
 
     /**
      * Minimal IStatus: this library provides none of its own.
@@ -42,13 +54,16 @@ class PortalServer(
     override fun serve(session: IHTTPSession): Response {
         val path = session.uri.trimEnd('/').ifEmpty { "/" }
         val isPost = session.method == Method.POST
-        android.util.Log.i("ReqDiag", "${session.method} $path from ${session.remoteIpAddress}")
 
         // Probes answer on any Host header: DNS is hijacked, so the hostname
         // in the URL is whatever the OS decided to ask for.
         if (ProbeRouter.isProbePath(path)) return respondProbe(session, path)
 
         return when {
+            // The sign-in page's artwork, served from the phone. Inlined as a
+            // data URI it would add ~80 KB to every response, and the spec
+            // caps the page at 100 KB.
+            path == LOGO_PATH -> respondLogo(session)
             path == "/api/login" && isPost -> respondLogin(session)
             path == "/api/logout" && isPost -> respondLogout(session)
             path == "/api/status" && !isPost -> respond(loginApi.status(clientMac(session)))
@@ -58,6 +73,27 @@ class PortalServer(
             !isPost -> respondPortal(session)
             else -> respond(ApiResponse.Err(404, """{"status":"not_found"}"""))
         }
+    }
+
+    private fun respondLogo(session: IHTTPSession): Response {
+        val bytes = logo() ?: return html(404, "<p>logo unavailable</p>")
+        val etag = "\"${bytes.size}-${bytes.fold(0L) { a, b -> a * 31 + b }}\""
+        if (session.headers["if-none-match"] == etag) {
+            return newFixedLengthResponse(
+                Status(304, "Not Modified"),
+                "image/png",
+                java.io.ByteArrayInputStream(ByteArray(0)),
+                0L,
+            ).noCache()
+        }
+        return newFixedLengthResponse(
+            Status(200, "OK"),
+            "image/png",
+            java.io.ByteArrayInputStream(bytes),
+            bytes.size.toLong(),
+        )
+            .apply { addHeader("ETag", etag) }
+            .noCache()
     }
 
     private fun respondPortal(session: IHTTPSession): Response {
@@ -73,7 +109,6 @@ class PortalServer(
     private fun respondProbe(session: IHTTPSession, path: String): Response {
         val mac = clientMac(session)
         val authorized = mac != null && isAuthorized(mac)
-        android.util.Log.i("ProbeDiag", "probe path=$path ip=${session.remoteIpAddress} mac=$mac authorized=$authorized")
         val r = ProbeRouter.responseFor(path, authorized, PortalPages.portalHtml(copyProvider()))
         return newFixedLengthResponse(statusOf(r.status), r.contentType, r.body).noCache()
     }
@@ -82,7 +117,6 @@ class PortalServer(
         val parms = readFormBody(session)
         val username = parms["username"].orEmpty()
         val password = parms["password"].orEmpty()
-        android.util.Log.i("ReqDiag", "login parsed username='$username' passwordLen=${password.length}")
         if (username.isBlank() || password.isBlank()) {
             return respond(ApiResponse.Err(400, """{"status":"invalid","message":"Username and password are required."}"""))
         }
@@ -126,16 +160,14 @@ class PortalServer(
                 read += n
             }
         }
-        if (read == 0) {
-            android.util.Log.i("ReqDiag", "body read 0 of $length bytes")
-            return emptyMap()
-        }
+        if (read == 0) return emptyMap()
 
         val text = String(raw, 0, read, Charsets.UTF_8)
         return parseUrlEncoded(text)
     }
 
-    private fun respondLogout(session: IHTTPSession): Response {        val mac = clientMac(session)
+    private fun respondLogout(session: IHTTPSession): Response {
+        val mac = clientMac(session)
             ?: return respond(ApiResponse.Err(400, """{"status":"unknown_device"}"""))
         runBlocking { withTimeoutOrNull(LOGIN_TIMEOUT_MS) { loginApi.logout(mac) } }
         return respond(ApiResponse.Ok("""{"status":"ok"}"""))
@@ -184,6 +216,8 @@ class PortalServer(
         private const val JSON = "application/json; charset=utf-8"
         private const val HTML = "text/html; charset=utf-8"
         private const val LOGIN_TIMEOUT_MS = 10_000L
+        const val LOGO_PATH = "/logo.png"
+
         private const val MAC_LOOKUP_TIMEOUT_MS = 2_000L
         private const val MAX_BODY_BYTES = 8 * 1024
 

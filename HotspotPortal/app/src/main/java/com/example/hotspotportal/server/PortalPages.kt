@@ -32,21 +32,25 @@ object PortalPages {
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-background:#10131a;color:#e8ecf1;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}
-.card{width:100%;max-width:380px}
-h1{font-size:24px;font-weight:600;margin:0 0 8px}
-p.w{color:#9aa4b2;font-size:14px;margin:0 0 24px;line-height:1.5}
-label{display:block;font-size:12px;color:#9aa4b2;margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em}
-input{width:100%;padding:13px 14px;margin-bottom:16px;border-radius:10px;border:1px solid #2a3040;
-background:#171b24;color:#e8ecf1;font-size:16px}
-input:focus{outline:2px solid #4a9eff;outline-offset:1px;border-color:#4a9eff}
-button{width:100%;padding:14px;border:0;border-radius:10px;background:#4a9eff;color:#fff;
-font-size:16px;font-weight:600;cursor:pointer}
+background:linear-gradient(180deg,#0077B6 0%,#023E8A 100%);color:#023E8A;
+display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}
+.card{width:100%;max-width:380px;background:#fff;border-radius:20px;padding:26px 22px 22px;
+box-shadow:0 18px 40px rgba(2,62,138,.28)}
+.mark{display:block;width:104px;height:104px;margin:0 auto 14px;border-radius:50%;
+background:#E6F4FB;object-fit:cover}
+h1{font-size:22px;font-weight:700;margin:0 0 6px;text-align:center;color:#023E8A}
+p.w{color:#3f5f80;font-size:14px;margin:0 0 20px;line-height:1.5;text-align:center}
+label{display:block;font-size:11px;color:#5b7a9c;margin:0 0 6px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+input{width:100%;padding:13px 14px;margin-bottom:14px;border-radius:12px;border:1.5px solid #cfe4f2;
+background:#F6FAFD;color:#023E8A;font-size:16px}
+input:focus{outline:2px solid #0077B6;outline-offset:1px;border-color:#0077B6;background:#fff}
+button{width:100%;padding:15px;border:0;border-radius:12px;background:#0077B6;color:#fff;
+font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 6px 16px rgba(0,119,182,.32)}
 button:disabled{opacity:.55}
-.err{color:#ff6b6b;font-size:14px;margin:-6px 0 14px}
-.ok{color:#3ddc97;font-size:18px;font-weight:600;margin:0 0 8px}
-.hint{color:#6b7684;font-size:12px;margin-top:20px;line-height:1.5}
-.foot{color:#6b7684;font-size:12px;margin-top:28px;text-align:center}
+.err{color:#C62828;font-size:14px;margin:0 0 12px;text-align:center}
+.ok{color:#0077B6;font-size:20px;font-weight:700;margin:0 0 8px;text-align:center}
+.hint{color:#7d97b3;font-size:12px;margin-top:18px;line-height:1.5;text-align:center}
+.foot{color:rgba(255,255,255,.85);font-size:12px;margin-top:22px;text-align:center}
 </style></head>
 <body><div class="card">$body<div class="foot">${esc(copy.footer)}</div></div>
 <script>
@@ -95,6 +99,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
     private fun formBody(welcome: String, error: String) = """
 <div id="formwrap">
+<img class="mark" src="/logo.png" width="104" height="104" alt="">
 <p class="w">${esc(welcome)}</p>
 <div id="err" role="alert">$error</div>
 <form id="f" autocomplete="on">
@@ -104,11 +109,12 @@ document.addEventListener('DOMContentLoaded',function(){
 <input id="p" name="password" type="password" autocomplete="current-password" required>
 <button id="b" type="submit">Sign in</button>
 </form>
-<p class="hint">Access is granted per device and expires automatically.</p>
+<p class="hint">Access is granted per device and lasts until you sign out or the portal is stopped.</p>
 </div>
 """
 
     private fun connectedBody(user: String) = """
+<img class="mark" src="/logo.png" width="104" height="104" alt="">
 <div class="ok">Connected</div>
 <p class="w">Signed in as <strong>${esc(user)}</strong>. This window will close automatically.</p>
 <iframe style="display:none" src="/generate_204"></iframe>
