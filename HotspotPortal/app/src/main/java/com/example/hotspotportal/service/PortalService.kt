@@ -119,7 +119,7 @@ class PortalService : Service() {
      */
     private suspend fun arm() {
         if (!app.shell.isAvailable()) {
-            fail("no root")
+            fail("no root", app.shell.lastRootFailure)
             return
         }
         if (!app.firewall.hasIptables()) {
@@ -211,9 +211,9 @@ class PortalService : Service() {
         }
     }
 
-    private fun fail(reason: String) {
+    private fun fail(reason: String, detail: String? = null) {
         _state.value = PortalState.ERROR
-        app.eventLog.error("setup_failed", reason)
+        app.eventLog.error("setup_failed", listOfNotNull(reason, detail).joinToString(": "))
         teardown()
     }
 

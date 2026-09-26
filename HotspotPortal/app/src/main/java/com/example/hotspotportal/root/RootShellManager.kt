@@ -1,5 +1,6 @@
 package com.example.hotspotportal.root
 
+import com.topjohnwu.superuser.NoShellException
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,13 +14,51 @@ import kotlinx.coroutines.withTimeout
  */
 class RootShellManager : ShellRunner {
 
+    /**
+     * Why the last [isAvailable] returned false, or null when root is live.
+     * The UI has no other way to tell "no su on this device" from "su denied",
+     * so the reason is kept here and logged instead of being swallowed.
+     */
+    @Volatile
+    var lastRootFailure: String? = null
+        private set
+
+    /**
+     * True when a root shell is live.
+     *
+     * libsu already proves root before handing a shell back: `ShellImpl`'s
+     * constructor writes `id` to the shell and only reports success when the
+     * output contains "uid=0". So a returned shell *is* root, and re-deriving
+     * that from `id -u` was a false-negative generator - any banner on stdout
+     * (ksud prints one) made the trimmed output fail to parse as an Int and
+     * turned a working root shell into "no root".
+     */
     override suspend fun isAvailable(): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
+        try {
             withTimeout(SHELL_TIMEOUT_MS) {
-                Shell.getShell() ?: return@withTimeout false
-                Shell.cmd("id", "-u").exec().out.joinToString("\n").trim().toIntOrNull() == 0
+                val root = Shell.getShell().isRoot
+                lastRootFailure = if (root) null else "su started but the shell is not uid=0"
+                root
             }
-        }.getOrDefault(false)
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            lastRootFailure = describeFailure(t)
+            false
+        }
+    }
+
+    private fun describeFailure(t: Throwable): String {
+        val base = t.javaClass.simpleName +
+            (t.message?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
+        // NoShellException is libsu's "could not start su" - always a grant or
+        // mount problem on the device, never a parsing problem.
+        return if (t is NoShellException) {
+            "$base - no usable su. Check the superuser grant in KernelSU/Magisk for THIS " +
+                "installed build (a reinstall drops the grant), then reactivate."
+        } else {
+            base
+        }
     }
 
     override suspend fun toolVersion(tool: String): String? = withContext(Dispatchers.IO) {
