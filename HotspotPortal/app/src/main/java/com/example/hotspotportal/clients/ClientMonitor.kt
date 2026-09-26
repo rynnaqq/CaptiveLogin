@@ -68,10 +68,10 @@ class ClientMonitor(private val shell: ShellRunner) {
         val parsed = parseNeighbours(shell.exec(listOf("ip", "neigh", "show", "dev", dev)).stdout)
         if (parsed.isEmpty()) {
             val fallback = parseArp()
-            if (fallback.isNotEmpty()) publish(fallback)
+            if (fallback.isNotEmpty()) publish(fallback, probed = false)
             return@withContext
         }
-        publish(if (probe) parsed.map { verify(it) } else parsed)
+        publish(if (probe) parsed.map { verify(it) } else parsed, probed = probe)
     }
 
     /**
@@ -105,10 +105,26 @@ class ClientMonitor(private val shell: ShellRunner) {
         }
     }
 
-    private fun publish(entries: List<ClientInfo>) {
+    /**
+     * Publishes the client list, without letting a less-informed read undo a
+     * better-informed one.
+     *
+     * [macFor] republishes on every HTTP request, and the OS fires probe
+     * requests every few seconds, so an unprobed refresh lands constantly. It
+     * carries the kernel's raw state, where a live device is usually STALE -
+     * which is exactly the state a probe had just resolved. Publishing it
+     * blindly made a connected guest flip to "Offline" and stuck there, because
+     * the next probe only ran a minute later.
+     *
+     * So: a probe result wins, a raw FAILED is authoritative and always wins,
+     * and a raw STALE may not undo a REACHABLE a probe established.
+     */
+    private fun publish(entries: List<ClientInfo>, probed: Boolean = true) {
+        val previous = _clients.value.associateBy { it.info.mac }
         _clients.value = entries.map { c ->
+            val state = mergeState(previous[c.mac]?.info?.state, c.state, probed)
             val (user, exp) = sessionLookup(c.mac)
-            ObservedClient(c, user, exp)
+            ObservedClient(c.copy(state = state), user, exp)
         }
     }
 
@@ -136,6 +152,23 @@ class ClientMonitor(private val shell: ShellRunner) {
     }
 
     companion object {
+        /**
+         * Combines a previously published state with a freshly read one.
+         *
+         * A probe result is a measurement and always wins. A raw FAILED from the
+         * kernel is authoritative and always wins, or a departed device would
+         * never be noticed. A raw STALE says only that the kernel has not heard
+         * from the device lately, so it may not undo a REACHABLE a probe
+         * established - that combination is exactly what left a connected guest
+         * showing as permanently offline.
+         */
+        fun mergeState(prior: String?, incoming: String, probed: Boolean): String = when {
+            probed -> incoming
+            incoming == "FAILED" || incoming == "INCOMPLETE" -> incoming
+            prior == "REACHABLE" && incoming == "STALE" -> "REACHABLE"
+            else -> incoming
+        }
+
         /**
          * One spelling for an address, so the kernel's `ip neigh` output and
          * the HTTP layer's peer address compare equal. IPv6 in particular is

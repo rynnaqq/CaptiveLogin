@@ -134,4 +134,35 @@ class ClientMonitorTest {
 
         assertEquals(2, groupByDevice(rows).size)
     }
+
+    @Test
+    fun `an unprobed STALE cannot undo a probed REACHABLE`() {
+        // This is the combination that pinned a connected guest to "offline":
+        // macFor republishes on every probe request the OS makes, and the raw
+        // state of a live device is STALE.
+        assertEquals(
+            "REACHABLE",
+            ClientMonitor.mergeState(prior = "REACHABLE", incoming = "STALE", probed = false),
+        )
+    }
+
+    @Test
+    fun `a kernel FAILED still wins over a previous REACHABLE`() {
+        // Otherwise a departed device would never be noticed.
+        assertEquals(
+            "FAILED",
+            ClientMonitor.mergeState(prior = "REACHABLE", incoming = "FAILED", probed = false),
+        )
+    }
+
+    @Test
+    fun `a probe result always wins`() {
+        assertEquals("FAILED", ClientMonitor.mergeState("REACHABLE", "FAILED", probed = true))
+        assertEquals("REACHABLE", ClientMonitor.mergeState("FAILED", "REACHABLE", probed = true))
+    }
+
+    @Test
+    fun `with no prior state the raw state is used`() {
+        assertEquals("STALE", ClientMonitor.mergeState(null, "STALE", probed = false))
+    }
 }
