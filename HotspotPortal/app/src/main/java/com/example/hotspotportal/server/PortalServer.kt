@@ -24,11 +24,20 @@ class PortalServer(
     private val isAuthorized: (mac: String) -> Boolean,
 ) : NanoHTTPD(port) {
 
-    /** Minimal IStatus: this library provides none of its own. */
-    private data class Status(
-        override val requestStatus: Int,
-        override val description: String,
-    ) : NanoHTTPD.Response.IStatus
+    /**
+     * Minimal IStatus: this library provides none of its own.
+     *
+     * The interface declares getDescription()/getRequestStatus() as Java
+     * methods, so they must be overridden as functions — Kotlin properties
+     * do not satisfy a Java getter here.
+     */
+    private class Status(
+        private val code: Int,
+        private val desc: String,
+    ) : NanoHTTPD.Response.IStatus {
+        override fun getDescription(): String = desc
+        override fun getRequestStatus(): Int = code
+    }
 
     override fun serve(session: IHTTPSession): Response {
         val path = session.uri.trimEnd('/').ifEmpty { "/" }

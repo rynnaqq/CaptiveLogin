@@ -60,13 +60,14 @@ class RootShellManager : ShellRunner {
         /**
          * libsu needs a default builder before the first shell is created,
          * otherwise the first command can hang waiting on a grant prompt.
+         * Note: setDefaultBuilder takes the Builder, not the built Shell, so
+         * build() must NOT be called here.
          */
         fun installDefaultBuilder() {
             Shell.setDefaultBuilder(
                 Shell.Builder.create()
                     .setTimeout(SHELL_TIMEOUT_MS)
                     .setInitializers()
-                    .build()
             )
         }
     }
