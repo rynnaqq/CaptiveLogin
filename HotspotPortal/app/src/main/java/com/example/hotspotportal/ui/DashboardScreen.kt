@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
@@ -45,9 +44,15 @@ import com.example.hotspotportal.ui.theme.brutalPanel
  *
  * The artwork sits in a sharp square rather than a circle - one radius scale for
  * the whole app, no exceptions.
+ *
+ * The portal state is deliberately NOT repeated here. This header used to print
+ * "Portal inactive" in lemon directly above a status card whose headline read
+ * "Portal inactive" in 24sp - the same two words twice, a couple of centimetres
+ * apart, in two sizes and two colours. State lives in exactly one place on this
+ * screen, and that place is the card below.
  */
 @Composable
-private fun BrandedHeader(active: Boolean) {
+private fun BrandedHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -64,18 +69,11 @@ private fun BrandedHeader(active: Boolean) {
                 .size(62.dp)
                 .border(BorderStroke(2.dp, Ink), RectangleShape),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleLarge,
-                color = White,
-            )
-            Text(
-                text = stringResource(if (active) R.string.portal_active else R.string.portal_inactive),
-                style = MaterialTheme.typography.bodySmall,
-                color = PopLemon,
-            )
-        }
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.titleLarge,
+            color = White,
+        )
     }
 }
 
@@ -122,7 +120,7 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        BrandedHeader(active)
+        BrandedHeader()
 
         // The one thing the admin looks at first. Fill carries the state, so it
         // reads from across the room: ocean live, lemon waiting, white idle.
