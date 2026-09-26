@@ -83,26 +83,18 @@ class ClientMonitor(private val shell: ShellRunner) {
         }
     }
 
-    /** Resolves a client IP to its MAC, or null if the kernel has not learned it yet. */
+    /**
+     * Resolves a client IP to its MAC, or null if the kernel has not learned it
+     * yet. Matching goes through [canonicalIp] on both sides: a client that
+     * reaches the portal over IPv6 sends a different spelling than `ip neigh`
+     * prints, and a literal compare would silently miss it.
+     */
     suspend fun macFor(ip: String): String? {
         refresh()
-        return _clients.value.firstOrNull { it.info.ip == ip }?.info?.mac
+        val want = canonicalIp(ip) ?: return null
+        return _clients.value.firstOrNull { canonicalIp(it.info.ip) == want }?.info?.mac
     }
 
-    private fun parseNeighbours(output: String): List<ClientInfo> = output.lineSequence()
-        .mapNotNull { line ->
-            val parts = line.trim().split(Regex("\\s+"))
-            if (parts.size < 5) return@mapNotNull null
-            val ip = parts[0]
-            if (ip.contains(':')) return@mapNotNull null // link-local IPv6 noise
-            val mac = parts[parts.indexOfFirst { it == "lladdr" } + 1]
-                .takeIf { parts.contains("lladdr") } ?: return@mapNotNull null
-            val state = parts.lastOrNull()?.uppercase() ?: "UNKNOWN"
-            ClientInfo(ip, mac.lowercase(), null, state)
-        }
-        .toList()
-
-    /** Fallback for kernels without `ip neigh` (some older/vendor builds). */
     private fun parseArp(): List<ClientInfo> {
         val content = runCatching { java.io.File("/proc/net/arp").readText() }.getOrElse { return emptyList() }
         return content.lineSequence().drop(1).mapNotNull { line ->
@@ -112,5 +104,59 @@ class ClientMonitor(private val shell: ShellRunner) {
             if (mac == "00:00:00:00:00:00") return@mapNotNull null
             ClientInfo(p[0], mac.lowercase(), null, if (p[2] == "0x2") "REACHABLE" else "STALE")
         }.toList()
+    }
+
+    companion object {
+        /**
+         * One spelling for an address, so the kernel's `ip neigh` output and
+         * the HTTP layer's peer address compare equal. IPv6 in particular is
+         * written in many equivalent forms, and a scope suffix appears on
+         * link-local addresses. Non-numeric input is rejected before
+         * InetAddress sees it, so this can never become a DNS lookup.
+         */
+        fun canonicalIp(raw: String): String? {
+            val s = raw.trim().removePrefix("[").removeSuffix("]").substringBefore('%')
+            if (s.isEmpty() || !NUMERIC.matches(s)) return null
+            return runCatching {
+                java.net.InetAddress.getByName(s).address.joinToString(".") { (it.toInt() and 0xFF).toString() }
+            }.getOrNull()
+        }
+
+        /**
+         * Parses `ip neigh show` output into clients.
+         *
+         * Two things had to change, both found on the device:
+         *
+         * - No field-count heuristic. The app runs `ip neigh show dev <if>`,
+         *   and because the interface is implied the kernel omits `dev <if>`
+         *   from every line, leaving 4 fields. Requiring 5 rejected every
+         *   single entry, IPv4 included, so no client was ever known.
+         * - IPv6 entries are kept. Dropping every address containing ':'
+         *   looked like removing link-local noise, but a client whose OS
+         *   prefers IPv6 - Windows does - has its only MAC mapping on a global
+         *   v6 address, so the connectivity probe fired straight after login
+         *   could not be matched to a MAC, the server treated the guest as
+         *   unauthorized, and the login page came back forever.
+         *
+         * Only link-local (fe80::/10), multicast and scope-suffixed entries are
+         * dropped: those are neighbour-discovery artefacts, not clients.
+         */
+        fun parseNeighbours(output: String): List<ClientInfo> = output.lineSequence()
+            .mapNotNull { line ->
+                val parts = line.trim().split(Regex("\\s+"))
+                val lladdr = parts.indexOf("lladdr")
+                if (lladdr < 0 || lladdr + 1 >= parts.size) return@mapNotNull null
+                val ip = parts[0]
+                if (ip.contains('%')) return@mapNotNull null
+                val lower = ip.lowercase()
+                if (lower.startsWith("fe80:") || lower.startsWith("ff")) return@mapNotNull null
+                val mac = parts[lladdr + 1]
+                if (!MAC.matches(mac)) return@mapNotNull null
+                ClientInfo(ip, mac.lowercase(), null, parts.last().uppercase())
+            }
+            .toList()
+
+        private val MAC = Regex("""[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}""")
+        private val NUMERIC = Regex("""[0-9a-fA-F:.%]+""")
     }
 }
