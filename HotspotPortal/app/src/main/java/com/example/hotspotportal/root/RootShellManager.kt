@@ -65,7 +65,7 @@ class RootShellManager : ShellRunner {
         runCatching {
             withTimeout(SHELL_TIMEOUT_MS) {
                 Shell.getShell() ?: return@withTimeout null
-                val r = Shell.cmd(tool, "--version").exec()
+                val r = Shell.cmd(quoteArgs(listOf(tool, "--version"))).exec()
                 if (r.code == 0) {
                     (r.out.joinToString("\n").trim().ifEmpty { r.err.joinToString("\n").trim() })
                         .lineSequence().firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
@@ -77,17 +77,24 @@ class RootShellManager : ShellRunner {
     }
 
     /**
-     * Runs [args] as argv. libsu concatenates the varargs into one command
-     * string inside the shell, but never re-tokenises them, so an interface
-     * name or MAC is passed as a single literal argument — the injection
-     * guarantee the FirewallCommands tests assert.
+     * Runs [args] as a single shell command.
+     *
+     * libsu has no argv semantics: `Shell.cmd(String...)` funnels into
+     * `CommandSource.serve`, which writes **each element on its own line** to
+     * the shell. Passing `iptables`, `-w`, `5` therefore ran three separate
+     * commands and reported the exit code of the last one, so every multi-word
+     * command in this app silently did nothing useful.
+     *
+     * The only correct call is one command string, so the elements are joined
+     * here - each wrapped in POSIX single quotes, which is the one form that
+     * is inert for every byte a MAC or interface name could contain.
      */
     override suspend fun exec(args: List<String>): ShellResult = withContext(Dispatchers.IO) {
         require(args.isNotEmpty()) { "exec requires at least one argument" }
         runCatching {
             withTimeout(SHELL_TIMEOUT_MS) {
                 Shell.getShell() ?: return@withTimeout ShellResult(-1, "", "no root shell available")
-                val r = Shell.cmd(*args.toTypedArray()).exec()
+                val r = Shell.cmd(quoteArgs(args)).exec()
                 ShellResult(r.code, r.out.joinToString("\n"), r.err.joinToString("\n"))
             }
         }.getOrElse { ShellResult(-1, "", it.message ?: it.toString()) }
@@ -95,6 +102,13 @@ class RootShellManager : ShellRunner {
 
     companion object {
         const val SHELL_TIMEOUT_MS = 15_000L
+
+        /**
+         * Joins [args] into one command line, single-quoting every element.
+         * Exposed for tests: this is the app's whole injection boundary.
+         */
+        fun quoteArgs(args: List<String>): String =
+            args.joinToString(" ") { "'" + it.replace("'", "'\\''") + "'" }
 
         /**
          * libsu needs a default builder before the first shell is created,

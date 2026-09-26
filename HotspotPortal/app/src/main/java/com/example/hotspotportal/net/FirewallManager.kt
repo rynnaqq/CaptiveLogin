@@ -49,15 +49,22 @@ class FirewallManager(private val shell: ShellRunner) {
             return null
         }
         return buildString {
-            if (v4 == null) append("no iptables; tried ${V4_CANDIDATES.joinToString(" ")}. ")
-            if (v6 == null) append("no ip6tables; tried ${V6_CANDIDATES.joinToString(" ")}. ")
-            append("Install an iptables module or a busybox module, then reactivate.")
+            if (v4 == null) append("no iptables. ")
+            if (v6 == null) append("no ip6tables. ")
+            append(probeFailures.joinToString("; "))
+            append(". Install an iptables module or a busybox module, then reactivate.")
         }
     }
 
+    /** Why each candidate was rejected - a bare "not found" hides PATH problems. */
+    private val probeFailures = mutableListOf<String>()
+
     private suspend fun probe(candidates: List<List<String>>): List<String>? {
         for (candidate in candidates) {
-            if (shell.exec(candidate + "--version").ok) return candidate
+            val r = shell.exec(candidate + "--version")
+            if (r.ok) return candidate
+            val why = r.stderr.trim().ifEmpty { r.stdout.trim() }.ifEmpty { "exit ${r.exitCode}" }
+            probeFailures += "${candidate.joinToString(" ")} -> ${why.lineSequence().first()}"
         }
         return null
     }
