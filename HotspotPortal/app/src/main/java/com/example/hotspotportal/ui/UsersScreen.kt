@@ -197,7 +197,7 @@ private fun UserRow(
                 .padding(horizontal = 8.dp, vertical = 2.dp),
         ) {
             Text(
-                text = stringResource(if (user.enabled) R.string.enabled else R.string.disable).uppercase(),
+                text = stringResource(if (user.enabled) R.string.enabled else R.string.disable),
                 style = MaterialTheme.typography.labelSmall,
                 color = White,
             )

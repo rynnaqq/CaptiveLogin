@@ -135,7 +135,7 @@ private fun NavItem(
             )
         }
         Text(
-            text = stringResource(tab.labelRes).uppercase(),
+            text = stringResource(tab.labelRes),
             style = MaterialTheme.typography.labelSmall,
             color = Ink,
         )

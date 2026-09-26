@@ -80,11 +80,14 @@ private fun BrandedHeader(active: Boolean) {
 }
 
 /**
- * A section heading that keeps Japanese as a second voice rather than a
- * replacement - the app stays readable in English, the katakana carries the mood.
+ * A section heading marked by a solid pink block.
+ *
+ * The block is the accent; the text is left in plain sentence case. An earlier
+ * pass put katakana in a pink chip here and shouted the English half in caps,
+ * which with the heavy borders read as noise rather than character.
  */
 @Composable
-private fun SectionLabel(katakana: String, english: String) {
+private fun SectionLabel(english: String) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -92,20 +95,13 @@ private fun SectionLabel(katakana: String, english: String) {
     ) {
         Box(
             Modifier
+                .size(width = 14.dp, height = 14.dp)
                 .background(PopPink)
-                .border(BorderStroke(2.dp, Ink), RectangleShape)
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-        ) {
-            Text(
-                text = katakana,
-                style = MaterialTheme.typography.labelSmall,
-                color = White,
-                fontWeight = FontWeight.ExtraBold,
-            )
-        }
+                .border(BorderStroke(2.dp, Ink), RectangleShape),
+        )
         Text(
-            text = english.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
+            text = english,
+            style = MaterialTheme.typography.titleSmall,
             color = Ink,
         )
     }
@@ -171,7 +167,7 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SectionLabel(stringResource(R.string.jp_network), stringResource(R.string.network_label))
+            SectionLabel(stringResource(R.string.network_label))
             StatusRow(stringResource(R.string.root_available), dash.rootAvailable)
             StatusRow("iptables", dash.iptablesAvailable)
             HorizontalDivider(thickness = 2.dp, color = Ink)
@@ -265,14 +261,13 @@ private fun InfoRow(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = label.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
             color = Ink,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
             color = Ink,
         )
     }
@@ -292,8 +287,8 @@ private fun MetricCard(modifier: Modifier, label: String, value: String) {
             color = Ocean,
         )
         Text(
-            text = label.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
             color = Ink,
         )
     }

@@ -98,7 +98,7 @@ private fun SettingsCard(title: String, content: @Composable () -> Unit) {
                 .padding(horizontal = 8.dp, vertical = 3.dp),
         ) {
             Text(
-                title.uppercase(),
+                title,
                 style = MaterialTheme.typography.labelMedium,
                 color = White,
             )

@@ -10,13 +10,6 @@
     <string name="tab_settings">Settings</string>
     <string name="tab_logs">Logs</string>
 
-    <!-- Section labels. Japanese sits beside the English, never replaces it. -->
-    <string name="jp_network">ネットワーク</string>
-    <string name="jp_stats">統計</string>
-    <string name="jp_devices">機器</string>
-    <string name="jp_accounts">アカウント</string>
-    <string name="jp_events">イベント</string>
-
     <!-- Dashboard -->
     <string name="portal_active">Portal active</string>
     <string name="portal_inactive">Portal inactive</string>

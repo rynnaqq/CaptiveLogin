@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 /**
  * Rimuru Portal's palette: neobrutalist structure, anime-pop accents.
@@ -121,21 +120,29 @@ private val SharpShapes = Shapes(
     extraLarge = RoundedCornerShape(0.dp),
 )
 
-/** Heavier and tighter than stock M3, which is set for softness. */
+/**
+ * Deliberately close to stock M3.
+ *
+ * An earlier pass pushed headings to Black/ExtraBold and added negative tracking
+ * up to -1sp on top of all-caps labels. Combined with the chunky borders and
+ * offset shadows that reads as aggressive rather than punchy - the structure
+ * already carries the style, so the type only has to stay legible. Weights are
+ * one notch above default and letterSpacing is left entirely alone.
+ */
 private val SharpType = Typography().let { base ->
     base.copy(
-        headlineLarge = base.headlineLarge.copy(fontWeight = FontWeight.Black, letterSpacing = (-1).sp),
-        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.Black, letterSpacing = (-0.8).sp),
-        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp),
-        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.4).sp),
-        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp),
-        titleSmall = base.titleSmall.copy(fontWeight = FontWeight.Bold),
-        bodyLarge = base.bodyLarge.copy(fontWeight = FontWeight.Medium),
-        bodyMedium = base.bodyMedium.copy(fontWeight = FontWeight.Medium),
-        bodySmall = base.bodySmall.copy(fontWeight = FontWeight.Medium),
-        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp),
-        labelMedium = base.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp),
-        labelSmall = base.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp),
+        headlineLarge = base.headlineLarge.copy(fontWeight = FontWeight.Bold),
+        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.Bold),
+        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.Bold),
+        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.Bold),
+        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        titleSmall = base.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        bodyLarge = base.bodyLarge.copy(fontWeight = FontWeight.Normal),
+        bodyMedium = base.bodyMedium.copy(fontWeight = FontWeight.Normal),
+        bodySmall = base.bodySmall.copy(fontWeight = FontWeight.Normal),
+        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        labelMedium = base.labelMedium.copy(fontWeight = FontWeight.Medium),
+        labelSmall = base.labelSmall.copy(fontWeight = FontWeight.Medium),
     )
 }
 
@@ -219,7 +226,6 @@ fun BrutalButton(
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.ExtraBold,
                 color = contentColor,
             )
         }

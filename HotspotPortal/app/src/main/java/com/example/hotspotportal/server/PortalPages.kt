@@ -48,27 +48,22 @@ display:flex;min-height:100vh;align-items:center;justify-content:center;padding:
 box-shadow:8px 8px 0 #0A0A0A;padding:0 20px 20px}
 .strip{height:12px;background:#FF2D95;border-bottom:3px solid #0A0A0A;margin:0 -20px 18px}
 .mark{display:block;width:96px;height:96px;margin:0 auto 14px;border:3px solid #0A0A0A}
-h1{font-size:23px;font-weight:900;margin:0 0 10px;text-align:center;letter-spacing:-.5px}
-.chipwrap{text-align:center;margin:0 0 14px}
-.chip{display:inline-block;background:#FFD400;border:3px solid #0A0A0A;color:#0A0A0A;
-font-size:12px;font-weight:800;letter-spacing:.14em;padding:4px 12px}
+h1{font-size:23px;font-weight:700;margin:0 0 14px;text-align:center}
 p.w{color:#33475B;font-size:14px;margin:0 0 18px;line-height:1.5;text-align:center}
-label{display:block;font-size:11px;color:#0A0A0A;margin:0 0 6px;text-transform:uppercase;
-letter-spacing:.09em;font-weight:800}
+label{display:block;font-size:12px;color:#0A0A0A;margin:0 0 6px;font-weight:600}
 input{width:100%;padding:13px 12px;margin-bottom:14px;border:3px solid #0A0A0A;border-radius:0;
 background:#F6FAFD;color:#0A0A0A;font-size:16px}
 input:focus{outline:0;background:#fff;box-shadow:4px 4px 0 #0A0A0A}
 button{width:100%;padding:16px;border:3px solid #0A0A0A;border-radius:0;background:#0077B6;color:#fff;
-font-size:16px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;
-box-shadow:6px 6px 0 #0A0A0A}
+font-size:16px;font-weight:600;cursor:pointer;box-shadow:6px 6px 0 #0A0A0A}
 button:active{box-shadow:2px 2px 0 #0A0A0A;transform:translate(4px,4px)}
 button:disabled{opacity:.5}
-.err{background:#FFD400;border:3px solid #0A0A0A;color:#0A0A0A;font-size:14px;font-weight:700;
+.err{background:#FFD400;border:3px solid #0A0A0A;color:#0A0A0A;font-size:14px;font-weight:600;
 margin:0 0 14px;padding:10px 12px}
 .ok{background:#0077B6;color:#fff;border:3px solid #0A0A0A;box-shadow:6px 6px 0 #0A0A0A;
-font-size:20px;font-weight:900;letter-spacing:.06em;margin:0 0 16px;padding:14px;text-align:center}
+font-size:19px;font-weight:700;margin:0 0 16px;padding:14px;text-align:center}
 .hint{color:#4A5D6E;font-size:12px;margin-top:18px;line-height:1.5;text-align:center}
-.foot{color:#fff;font-size:12px;font-weight:700;margin-top:20px;text-align:center;
+.foot{color:#fff;font-size:12px;font-weight:600;margin-top:20px;text-align:center;
 border-top:3px solid #0A0A0A;padding-top:12px}
 </style></head>
 <body><div class="card">$body<div class="foot">${esc(copy.footer)}</div></div>
@@ -93,7 +88,7 @@ function post(){
       // Hit the OS's own connectivity check so its portal window closes
       // itself without the guest doing anything.
       var w=document.getElementById('formwrap');
-      w.innerHTML='<p class="ok">CONNECTED</p><p class="w">You are online. This window will close automatically.</p>';
+      w.innerHTML='<p class="ok">Connected</p><p class="w">You are online. This window will close automatically.</p>';
       var i=document.createElement('iframe');
       i.style.cssText='display:none';i.src=uaPath();
       document.body.appendChild(i);
@@ -121,7 +116,6 @@ document.addEventListener('DOMContentLoaded',function(){
 <div class="strip"></div>
 <img class="mark" src="/logo.png" width="96" height="96" alt="">
 <h1>${esc(title)}</h1>
-<div class="chipwrap"><span class="chip">ログイン</span></div>
 <p class="w">${esc(welcome)}</p>
 <div id="err" role="alert">$error</div>
 <form id="f" autocomplete="on">
@@ -139,7 +133,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <div id="formwrap">
 <div class="strip"></div>
 <img class="mark" src="/logo.png" width="96" height="96" alt="">
-<p class="ok">CONNECTED</p>
+<p class="ok">Connected</p>
 <p class="w">Signed in as <strong>${esc(user)}</strong>. This window will close automatically.</p>
 <iframe style="display:none" src="/generate_204"></iframe>
 </div>
