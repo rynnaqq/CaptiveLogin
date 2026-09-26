@@ -4,6 +4,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -69,13 +70,38 @@ class DnsCodecTest {
         assertEquals(1, readU16(res, 6)) // ANCOUNT
         // Question echoed verbatim.
         assertArrayEquals(aQuery.copyOfRange(12, aQuery.size), res.copyOfRange(12, q.questionEnd))
-        // A record: type 1, class 1, TTL 10, rdlength 4, then the address.
+        // A record: type 1, class 1, TTL 1, rdlength 4, then the address.
         val answer = q.questionEnd
         assertEquals(1, readU16(res, answer + 2))
         assertEquals(1, readU16(res, answer + 4))
-        assertEquals(10L, readU32(res, answer + 6))
+        assertEquals(1L, readU32(res, answer + 6))
         assertEquals(4, readU16(res, answer + 10))
         assertArrayEquals(gateway, res.copyOfRange(answer + 12, answer + 16))
+    }
+
+    /**
+     * The blocking answer is a lie with a lifetime, and the lifetime is the bug.
+     *
+     * While a guest is blocked, its A query is answered with the hotspot's own
+     * address so the OS captive-portal check fires. The client caches that. Once
+     * it authenticates, the firewall stops intercepting, but the client keeps
+     * sending traffic to the phone until the entry expires - which is exactly
+     * the reported "signs in, then has no internet for a while".
+     *
+     * One second bounds that to about a second, and costs a blocked client
+     * nothing because the answer never changes. Asserted explicitly so a
+     * well-meaning "let's cache it properly for a minute" cannot come back.
+     */
+    @Test
+    fun `the blocking answer expires almost immediately`() {
+        val q = DnsCodec.parseQuery(aQuery)!!
+        val res = DnsCodec.buildResponse(q, aQuery, gateway)
+
+        val ttl = readU32(res, q.questionEnd + 6)
+        assertTrue(
+            "blocking A answers must not be cached by the client, was TTL=$ttl",
+            ttl in 1..2,
+        )
     }
 
     @Test

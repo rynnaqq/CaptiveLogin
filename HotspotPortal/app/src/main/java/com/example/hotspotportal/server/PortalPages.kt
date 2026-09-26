@@ -96,14 +96,21 @@ function post(){
   x.onload=function(){
     var j={};try{j=JSON.parse(x.responseText)}catch(e){}
     if(x.status===200){
+      // The server tells us which probe this OS actually asks for. Guessing it
+      // here from navigator.userAgent is wrong: this page runs inside the
+      // captive portal webview, whose UA is the webview's, not the connectivity
+      // checker's. Probing the wrong path leaves the OS still seeing a captive
+      // portal and re-checking, which is the "signed in but no internet for a
+      // while" delay. uaPath() stays only as a fallback.
+      var probe=(j&&j.nextProbe)||uaPath();
       // Hit the OS's own connectivity check so its portal window closes
       // itself without the guest doing anything.
       var w=document.getElementById('formwrap');
       w.innerHTML='<p class="ok">接続しました</p><p class="oks">Connected — you are online. This window will close automatically.</p>';
       var i=document.createElement('iframe');
-      i.style.cssText='display:none';i.src=uaPath();
+      i.style.cssText='display:none';i.src=probe;
       document.body.appendChild(i);
-      setTimeout(function(){window.location=uaPath();},300);
+      setTimeout(function(){window.location=probe;},300);
     }else{
       b.disabled=false;
       var e=document.getElementById('err');

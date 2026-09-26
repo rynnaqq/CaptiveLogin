@@ -20,7 +20,21 @@ object DnsCodec {
     private const val FLAG_QR_RESPONSE = 0x8000
     private const val FLAG_RD = 0x0100
     private const val FLAG_RA = 0x0080
-    private const val DEFAULT_TTL_SECONDS = 10
+    /**
+     * Deliberately 1 second, not something longer.
+     *
+     * A blocked client's A query is answered with the hotspot's own address so
+     * the OS captive-portal check fires and the guest is shown the sign-in page.
+     * That answer is a lie, and the client caches it. Once the guest
+     * authenticates the firewall stops intercepting, but the client keeps
+     * resolving to the phone until the entry expires - so it spends that whole
+     * window talking to the wrong host, which reads as "signed in, but no
+     * internet for a while". One second bounds that window to about a second.
+     *
+     * Re-resolving every second costs a blocked client nothing: the answer it
+     * gets back is always the same, and the traffic never leaves the phone.
+     */
+    private const val DEFAULT_TTL_SECONDS = 1
 
     /** A parsed DNS question, or null if [bytes] is not a well-formed query. */
     data class Query(

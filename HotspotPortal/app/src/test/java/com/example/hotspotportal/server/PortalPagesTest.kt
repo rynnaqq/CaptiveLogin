@@ -61,9 +61,35 @@ class PortalPagesTest {
         assertTrue(wrongPassword.contains("password is wrong"))
     }
 
+    /**
+     * The page must use the probe the SERVER chose.
+     *
+     * The server works out which connectivity check the client's OS actually
+     * makes and returns it as `nextProbe`, precisely because the page cannot
+     * know: the page runs inside the captive portal webview, whose user agent
+     * is the webview's, not the connectivity checker's. An earlier version
+     * ignored `nextProbe` and re-guessed from `navigator.userAgent`, so the
+     * guest was sent to a probe the OS never makes. The OS keeps seeing a
+     * captive portal and re-checking, which is the reported delay between
+     * signing in and actually getting internet.
+     */
     @Test
-    fun `user supplied text is escaped in every rendering path`() {
-        val nasty = "<script>alert(1)</script>"
+    fun `the page uses the probe the server returned rather than re-guessing`() {
+        val html = PortalPages.portalHtml(copy)
+
+        assertTrue(
+            "the page must read nextProbe from the login response",
+            html.contains("j.nextProbe"),
+        )
+        // The guess stays only as a fallback, so it must not be the sole source.
+        assertTrue(
+            "nextProbe needs a fallback for a response without it",
+            html.contains("j&&j.nextProbe") || html.contains("(j&&j.nextProbe)||"),
+        )
+    }
+
+    @Test
+    fun `user supplied text is escaped in every rendering path`() {        val nasty = "<script>alert(1)</script>"
         val html = PortalPages.portalHtml(
             copy.copy(title = nasty, welcome = nasty, footer = nasty),
             message = nasty,
