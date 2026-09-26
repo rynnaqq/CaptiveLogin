@@ -107,6 +107,12 @@ class PortalService : Service() {
             armed = true
             _armed.value = true
             _state.value = PortalState.ARMED
+            // teardownStarted makes one teardown idempotent, so it has to be
+            // cleared when a new arm cycle begins. Left latched, the very first
+            // teardown - Stop, onDestroy, or the hotspot dropping - silently
+            // disabled every later one, and "Stop portal" became a no-op that
+            // left the firewall installed and the portal reachable.
+            teardownStarted = false
             jobs += scope.launch { arm() }
         }
         return START_STICKY

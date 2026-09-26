@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -65,13 +67,28 @@ class PortalViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         viewModelScope.launch { refreshCapabilities() }
+
+        // The service changes state on its own schedule - ARMED while it waits
+        // for a hotspot, ACTIVE once rules are installed, ERROR on failure - and
+        // the dashboard has to follow it. Snapshotting portalState inside
+        // refreshCapabilities (which runs on init and 1.5s after Activate) left
+        // the button reading "Activate portal" while the portal was already
+        // armed, and tapping that called start() on an armed service, which
+        // does nothing at all.
+        viewModelScope.launch {
+            while (isActive) {
+                _dashboard.value = _dashboard.value.copy(
+                    portalState = PortalService.instance?.state?.value ?: PortalState.STOPPED,
+                )
+                delay(1_000)
+            }
+        }
     }
 
     fun refreshCapabilities() = viewModelScope.launch {
         _dashboard.value = _dashboard.value.copy(
             rootAvailable = portalApp.shell.isAvailable(),
             iptablesAvailable = portalApp.firewall.resolveTools() == null,
-            portalState = PortalService.instance?.state?.value ?: PortalState.STOPPED,
         )
     }
 

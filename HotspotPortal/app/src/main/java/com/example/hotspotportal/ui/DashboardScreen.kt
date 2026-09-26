@@ -30,6 +30,10 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
     val dash by vm.dashboard.collectAsStateWithLifecycle()
     val cfg by vm.settings.collectAsStateWithLifecycle()
     val active = dash.portalState == PortalState.ACTIVE
+    // Stop has to be offered while merely ARMED too. While the portal waits for
+    // a hotspot it is not ACTIVE, and gating the button on ACTIVE left an armed
+    // portal with no way to stop it at all.
+    val armed = active || dash.portalState == PortalState.ARMED
 
     Column(
         modifier = Modifier
@@ -93,7 +97,7 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
 
         Spacer(Modifier.height(4.dp))
 
-        if (active) {
+        if (armed) {
             OutlinedButton(
                 onClick = onStop,
                 modifier = Modifier.fillMaxWidth(),
