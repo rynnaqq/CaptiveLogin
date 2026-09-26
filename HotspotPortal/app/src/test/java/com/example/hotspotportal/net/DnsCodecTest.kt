@@ -15,7 +15,9 @@ import org.junit.Test
  */
 class DnsCodecTest {
 
-    private val gateway = byteArrayOf(192, 168, 43, 1)
+    // Byte literals are signed: 192/168 must be written as their negative
+    // two's-complement values or they do not fit a Byte.
+    private val gateway = byteArrayOf(192.toByte(), 168.toByte(), 43, 1)
 
     /** Real `dig` query for connectivitycheck.gstatic.com A, ID 0x1234. */
     private val aQuery = byteArrayOf(

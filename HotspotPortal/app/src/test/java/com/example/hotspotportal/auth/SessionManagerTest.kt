@@ -30,9 +30,9 @@ class SessionManagerTest {
     private val firewall = FirewallManager(shell)
     private var now = 1_000_000L
     private val cfg = SessionManager.SessionConfig(durationMillis = 8 * 3600_000L, idleMillis = 30 * 60_000L)
-    private val removed = mutableListOf<String>()
+    private val events = mutableListOf<String>()
 
-    private fun manager() = SessionManager(firewall, { cfg }) { _, _ -> removed += it }
+    private fun manager() = SessionManager(firewall, { cfg }) { event, _ -> events += event }
 
     @Test
     fun `login installs both v4 and v6 rules`() = runTest {
