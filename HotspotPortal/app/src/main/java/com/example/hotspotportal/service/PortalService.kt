@@ -179,6 +179,12 @@ class PortalService : Service() {
                     macResolver = { ip -> app.clientMonitor.macFor(ip) },
                     isAuthorized = { mac -> sm.isAuthorized(mac) },
                     logoProvider = { app.readLogo() },
+                    // Probe timeline for the "signs in, then no internet for a
+                    // while" report. INFO so it only lands in the Logs tab when
+                    // the admin has actually asked for verbose logging.
+                    trace = { line ->
+                        if (app.settingsState.value.debugLogging) app.eventLog.record("probe_trace", line)
+                    },
                 )
                 server = s
                 // A dead portal must never be reported as active: without this

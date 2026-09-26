@@ -24,9 +24,22 @@ class PortalServer(
     private val macResolver: suspend (ip: String) -> String?,
     private val isAuthorized: (mac: String) -> Boolean,
     private val logoProvider: () -> ByteArray? = { null },
+    private val trace: (String) -> Unit = {},
 ) : NanoHTTPD(port) {
 
     private val logoCache = AtomicReference<ByteArray?>(null)
+
+    /**
+     * When the most recent successful login happened, per source IP.
+     *
+     * Diagnostics for "the guest signs in, then sits with no internet for a
+     * while". The gap between login and the client's first real request is the
+     * single measurement that separates our causes from the OS's own captive
+     * portal re-check cadence, and there is no other way to tell them apart
+     * from inside the phone. Kept per-IP so two guests do not contaminate
+     * each other's timeline.
+     */
+    private val loginAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
     /** Read once: the asset cannot change while the service runs. */
     private fun logo(): ByteArray? {
@@ -54,10 +67,25 @@ class PortalServer(
     override fun serve(session: IHTTPSession): Response {
         val path = session.uri.trimEnd('/').ifEmpty { "/" }
         val isPost = session.method == Method.POST
+        val isProbe = ProbeRouter.isProbePath(path)
+        if (isProbe || path == "/") {
+            // Fire-and-forget: diagnostics must never add latency to the request
+            // they are measuring, so the MAC lookup is deliberately skipped and
+            // the trace keys off the source address instead.
+            trace(
+                buildString {
+                    append(if (isProbe) "probe" else "page")
+                    append(" path=").append(path)
+                    append(" ip=").append(session.remoteIpAddress)
+                    val since = loginAt[session.remoteIpAddress]?.let { System.currentTimeMillis() - it }
+                    if (since != null) append(" sinceLoginMs=").append(since)
+                },
+            )
+        }
 
         // Probes answer on any Host header: DNS is hijacked, so the hostname
         // in the URL is whatever the OS decided to ask for.
-        if (ProbeRouter.isProbePath(path)) return respondProbe(session, path)
+        if (isProbe) return respondProbe(session, path)
 
         return when {
             // The sign-in page's artwork, served from the phone. Inlined as a
@@ -127,6 +155,9 @@ class PortalServer(
                 loginApi.login(username, password, session.remoteIpAddress, session.headers["user-agent"])
             }
         } ?: return respond(ApiResponse.Err(503, """{"status":"busy","message":"Please try again."}"""))
+        if (result.status == 200) {
+            loginAt[session.remoteIpAddress] = System.currentTimeMillis()
+        }
         return respond(result)
     }
 
