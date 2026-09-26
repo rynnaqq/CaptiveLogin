@@ -1,0 +1,55 @@
+name: Android CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # The Gradle wrapper jar is not committed, so Gradle is installed
+      # explicitly at a pinned version rather than via ./gradlew.
+      - name: Install Gradle 8.9
+        run: |
+          curl -sSL --retry 3 \
+            https://services.gradle.org/distributions/gradle-8.9-bin.zip \
+            -o "$RUNNER_TEMP/gradle.zip"
+          unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+
+      # ubuntu-latest ships an Android SDK but the licence acceptance is not
+      # always recorded; without it the build fails on the first aapt2 call.
+      - name: Accept Android SDK licences
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" < /dev/null || true
+
+      - name: Unit tests
+        working-directory: HotspotPortal
+        run: gradle test --no-daemon --console=plain --stacktrace
+
+      - name: Assemble debug APK
+        working-directory: HotspotPortal
+        run: gradle assembleDebug --no-daemon --console=plain --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hotspotportal-debug
+          path: HotspotPortal/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
