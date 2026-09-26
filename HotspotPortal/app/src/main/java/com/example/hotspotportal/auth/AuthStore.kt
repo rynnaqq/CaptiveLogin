@@ -4,8 +4,16 @@ import com.example.hotspotportal.store.PortalUserDao
 import com.example.hotspotportal.store.PortalUserEntity
 import org.mindrot.jbcrypt.BCrypt
 
-/** Why a login attempt failed. Drives the message the guest sees. */
-enum class LoginFailure { INVALID, DISABLED, EXPIRED, DEVICE_LIMIT, LOCKED }
+/**
+ * Why a login attempt failed. Drives the message the guest sees.
+ *
+ * NO_SUCH_USER and WRONG_PASSWORD are separate on purpose: the admin asked for
+ * the portal to say which half was wrong, so a guest staring at a sign-in form
+ * is not left guessing. The trade-off is deliberate and worth stating - this
+ * lets anyone who reaches the portal enumerate which usernames exist. The
+ * per-MAC rate limit (5 failures / 5 minutes) is what bounds brute force.
+ */
+enum class LoginFailure { INVALID, NO_SUCH_USER, WRONG_PASSWORD, DISABLED, EXPIRED, DEVICE_LIMIT, LOCKED }
 
 /**
  * Result of an admin-side credential check.
@@ -34,9 +42,9 @@ class AuthStore(private val userDao: PortalUserDao) {
 
     suspend fun verify(username: String, password: String): LoginResult {
         val user = userDao.byUsername(username.trim().lowercase())
-            ?: return LoginResult.Failure(LoginFailure.INVALID)
+            ?: return LoginResult.Failure(LoginFailure.NO_SUCH_USER)
         if (!BCrypt.checkpw(password, user.passwordHash)) {
-            return LoginResult.Failure(LoginFailure.INVALID)
+            return LoginResult.Failure(LoginFailure.WRONG_PASSWORD)
         }
         if (!user.enabled) return LoginResult.Failure(LoginFailure.DISABLED)
         if (user.expired) return LoginResult.Failure(LoginFailure.EXPIRED)

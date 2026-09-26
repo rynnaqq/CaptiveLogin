@@ -42,6 +42,7 @@ class PortalServer(
     override fun serve(session: IHTTPSession): Response {
         val path = session.uri.trimEnd('/').ifEmpty { "/" }
         val isPost = session.method == Method.POST
+        android.util.Log.i("ReqDiag", "${session.method} $path from ${session.remoteIpAddress}")
 
         // Probes answer on any Host header: DNS is hijacked, so the hostname
         // in the URL is whatever the OS decided to ask for.
@@ -80,8 +81,10 @@ class PortalServer(
     private fun respondLogin(session: IHTTPSession): Response {
         val parms = HashMap<String, String>()
         runCatching { session.parseBody(parms) }
+            .onFailure { android.util.Log.i("ReqDiag", "parseBody failed: ${it.message}") }
         val username = parms["username"].orEmpty()
         val password = parms["password"].orEmpty()
+        android.util.Log.i("ReqDiag", "login parsed username='$username' passwordLen=${password.length}")
         if (username.isBlank() || password.isBlank()) {
             return respond(ApiResponse.Err(400, """{"status":"invalid","message":"Username and password are required."}"""))
         }

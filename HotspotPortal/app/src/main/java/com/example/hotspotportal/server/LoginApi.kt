@@ -63,6 +63,12 @@ class LoginApi(
                 rateLimiter.recordFailure(mac)
                 onEvent("login_fail", "$username from $ip (${result.reason})")
                 val message = when (result.reason) {
+                    // Specific on purpose: the guest is told which half was
+                    // wrong, which is what the admin asked for. This does let a
+                    // guest enumerate usernames; the rate limit above is the
+                    // brute-force defence.
+                    LoginFailure.NO_SUCH_USER -> "There is no account with that username."
+                    LoginFailure.WRONG_PASSWORD -> "That username exists, but the password is wrong."
                     LoginFailure.DISABLED -> "This account is disabled."
                     LoginFailure.EXPIRED -> "This account has expired."
                     else -> "Invalid username or password."
@@ -72,6 +78,7 @@ class LoginApi(
                     json(
                         mapOf(
                             "status" to "invalid",
+                            "detail" to result.reason.name,
                             "message" to message,
                             "remainingAttempts" to rateLimiter.remainingAttempts(mac),
                         )

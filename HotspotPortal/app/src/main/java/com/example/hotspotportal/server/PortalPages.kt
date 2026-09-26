@@ -18,7 +18,7 @@ data class PortalCopy(
 object PortalPages {
 
     fun portalHtml(copy: PortalCopy, message: String? = null, signedInAs: String? = null): String {
-        val error = message?.let { """<p class="err" role="alert">${esc(it)}</p>""" } ?: ""
+        val error = message?.let { """<p class="err">${esc(it)}</p>""" } ?: ""
         val body = if (signedInAs != null) {
             connectedBody(signedInAs)
         } else {
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded',function(){
     private fun formBody(welcome: String, error: String) = """
 <div id="formwrap">
 <p class="w">${esc(welcome)}</p>
-$error
+<div id="err" role="alert">$error</div>
 <form id="f" autocomplete="on">
 <label for="u">Username</label>
 <input id="u" name="username" type="text" autocapitalize="off" autocorrect="off" required autofocus>
