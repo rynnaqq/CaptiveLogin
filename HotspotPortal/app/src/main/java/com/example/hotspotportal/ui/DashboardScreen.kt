@@ -1,6 +1,10 @@
 package com.example.hotspotportal.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,11 +23,15 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -256,6 +264,55 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
     }
 }
 
+/**
+ * A tick that draws itself: short leg first, then the long one.
+ *
+ * Hand-drawn with Canvas rather than pulled in as a Lottie animation. The
+ * alternatives were a 4.8 KB Lottie JSON behind the lottie-compose runtime
+ * (a dependency this app does not otherwise have, and a download that needs a
+ * LottieFiles login) or a looping GIF. A tick is two line segments, so the
+ * whole thing is a lerp - and a square-capped hard stroke matches the brutalist
+ * borders better than any imported asset would.
+ */
+@Composable
+private fun OkTick(color: Color, modifier: Modifier = Modifier) {
+    val progress = remember { Animatable(0f) }
+    // Keyed on state so the tick re-draws if the row flips back to healthy.
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, tween(durationMillis = 400, easing = LinearOutSlowInEasing))
+    }
+
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val p = progress.value
+        val strokeWidth = w * 0.15f
+
+        val a = Offset(w * 0.16f, h * 0.52f)
+        val b = Offset(w * 0.40f, h * 0.76f)
+        val c = Offset(w * 0.86f, h * 0.24f)
+
+        val t1 = (p / 0.4f).coerceIn(0f, 1f)
+        drawLine(
+            color = color,
+            start = a,
+            end = Offset(a.x + (b.x - a.x) * t1, a.y + (b.y - a.y) * t1),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Square,
+        )
+        if (p > 0.4f) {
+            val t2 = ((p - 0.4f) / 0.6f).coerceIn(0f, 1f)
+            drawLine(
+                color = color,
+                start = b,
+                end = Offset(b.x + (c.x - b.x) * t2, b.y + (c.y - b.y) * t2),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Square,
+            )
+        }
+    }
+}
+
 @Composable
 private fun StatusRow(jp: String, en: String, ok: Boolean?) {
     Row(
@@ -278,27 +335,26 @@ private fun StatusRow(jp: String, en: String, ok: Boolean?) {
                 .padding(horizontal = 8.dp, vertical = 3.dp),
             contentAlignment = Alignment.Center,
         ) {
-            LabelText(
-                jp = when (ok) {
-                    true -> stringResource(R.string.jp_ok)
-                    false -> stringResource(R.string.jp_no)
-                    null -> "—"
-                },
-                // The OK hand sign rather than the word: it is the gesture the
-                // Japanese side of this app already speaks, and an emoji needs
-                // no asset, no decoder and no dependency. An animated GIF here
-                // would mean Coil plus a binary for a value that changes twice
-                // a day.
-                en = when (ok) {
-                    true -> "👌"
-                    false -> "👎"
-                    null -> "❓"
-                },
-                jpStyle = MaterialTheme.typography.labelSmall,
-                enStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 18.sp),
-                jpColor = if (ok == null) Ink else White,
-                enColor = if (ok == null) Ink else White,
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = when (ok) {
+                        true -> stringResource(R.string.jp_ok)
+                        false -> stringResource(R.string.jp_no)
+                        null -> "—"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (ok == null) Ink else White,
+                )
+                if (ok == true) {
+                    OkTick(color = White, modifier = Modifier.size(20.dp))
+                } else {
+                    Text(
+                        text = if (ok == false) "👎" else "❓",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 16.sp),
+                        color = if (ok == null) Ink else White,
+                    )
+                }
+            }
         }
     }
 }
