@@ -33,9 +33,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
 import com.example.hotspotportal.clients.ObservedClient
 import com.example.hotspotportal.ui.theme.Danger
+import com.example.hotspotportal.ui.theme.Go
 import com.example.hotspotportal.ui.theme.Ink
+import com.example.hotspotportal.ui.theme.LabelText
 import com.example.hotspotportal.ui.theme.PanelTint
-import com.example.hotspotportal.ui.theme.PopPink
 import com.example.hotspotportal.ui.theme.White
 import com.example.hotspotportal.ui.theme.brutalPanel
 
@@ -45,7 +46,10 @@ fun ClientsScreen(vm: PortalViewModel) {
     var kicking by remember { mutableStateOf<ObservedClient?>(null) }
 
     if (clients.isEmpty()) {
-        EmptyState(stringResource(R.string.clients_empty))
+        EmptyState(
+            jp = stringResource(R.string.jp_clients_empty),
+            en = stringResource(R.string.clients_empty),
+        )
         return
     }
 
@@ -99,22 +103,29 @@ private fun ClientRow(client: ObservedClient, onKick: () -> Unit) {
             )
             // A hard chip, not a soft AssistChip: the signed-in state is the
             // thing the admin scans this list for.
-            val (chipFill, chipInk) = if (client.authorized) PopPink to White else PanelTint to Ink
+            val (chipFill, chipInk) = if (client.authorized) Go to White else PanelTint to Ink
             Box(
                 Modifier
                     .background(chipFill)
                     .border(BorderStroke(2.dp, Ink), RectangleShape)
                     .padding(horizontal = 8.dp, vertical = 3.dp),
             ) {
-                Text(
-                    text = if (client.authorized) {
-                        stringResource(R.string.state_logged_in, client.username.orEmpty())
-                    } else {
-                        stringResource(R.string.state_blocked)
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = chipInk,
-                )
+                if (client.authorized) {
+                    Text(
+                        text = client.username.orEmpty(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = chipInk,
+                    )
+                } else {
+                    LabelText(
+                        jp = stringResource(R.string.jp_blocked),
+                        en = stringResource(R.string.state_blocked),
+                        jpStyle = MaterialTheme.typography.labelSmall,
+                        enStyle = MaterialTheme.typography.labelSmall,
+                        jpColor = chipInk,
+                        enColor = chipInk,
+                    )
+                }
             }
         }
         Text(
@@ -150,7 +161,7 @@ private fun ClientRow(client: ObservedClient, onKick: () -> Unit) {
  * with nothing in it still looks like part of the app instead of a failed load.
  */
 @Composable
-internal fun EmptyState(message: String) {
+internal fun EmptyState(jp: String, en: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -163,10 +174,13 @@ internal fun EmptyState(message: String) {
                 .brutalPanel(fill = PanelTint)
                 .padding(20.dp),
         ) {
-            Text(
-                message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Ink,
+            LabelText(
+                jp = jp,
+                en = en,
+                jpStyle = MaterialTheme.typography.titleMedium,
+                enStyle = MaterialTheme.typography.bodySmall,
+                jpColor = Ink,
+                enColor = Ink,
             )
         }
     }

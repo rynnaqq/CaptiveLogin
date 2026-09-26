@@ -50,7 +50,8 @@ box-shadow:8px 8px 0 #0A0A0A;padding:0 20px 20px}
 .mark{display:block;width:96px;height:96px;margin:0 auto 14px;border:3px solid #0A0A0A}
 h1{font-size:23px;font-weight:700;margin:0 0 14px;text-align:center}
 p.w{color:#33475B;font-size:14px;margin:0 0 18px;line-height:1.5;text-align:center}
-label{display:block;font-size:12px;color:#0A0A0A;margin:0 0 6px;font-weight:600}
+label{display:block;font-size:15px;font-weight:700;color:#0A0A0A;margin:0 0 1px}
+.sublabel{display:block;font-size:11px;font-weight:600;color:#5B6B7A;margin:0 0 6px}
 input{width:100%;padding:13px 12px;margin-bottom:14px;border:3px solid #0A0A0A;border-radius:0;
 background:#F6FAFD;color:#0A0A0A;font-size:16px}
 input:focus{outline:0;background:#fff;box-shadow:4px 4px 0 #0A0A0A}
@@ -60,8 +61,9 @@ button:active{box-shadow:2px 2px 0 #0A0A0A;transform:translate(4px,4px)}
 button:disabled{opacity:.5}
 .err{background:#FFD400;border:3px solid #0A0A0A;color:#0A0A0A;font-size:14px;font-weight:600;
 margin:0 0 14px;padding:10px 12px}
-.ok{background:#0077B6;color:#fff;border:3px solid #0A0A0A;box-shadow:6px 6px 0 #0A0A0A;
-font-size:19px;font-weight:700;margin:0 0 16px;padding:14px;text-align:center}
+.ok{background:#1B7F3B;color:#fff;border:3px solid #0A0A0A;box-shadow:6px 6px 0 #0A0A0A;
+font-size:19px;font-weight:700;margin:0 0 8px;padding:12px;text-align:center}
+.oks{color:#33475B;font-size:12px;margin:0 0 16px;text-align:center;font-weight:600}
 .hint{color:#4A5D6E;font-size:12px;margin-top:18px;line-height:1.5;text-align:center}
 .foot{color:#fff;font-size:12px;font-weight:600;margin-top:20px;text-align:center;
 border-top:3px solid #0A0A0A;padding-top:12px}
@@ -88,7 +90,7 @@ function post(){
       // Hit the OS's own connectivity check so its portal window closes
       // itself without the guest doing anything.
       var w=document.getElementById('formwrap');
-      w.innerHTML='<p class="ok">Connected</p><p class="w">You are online. This window will close automatically.</p>';
+      w.innerHTML='<p class="ok">接続しました</p><p class="oks">Connected — you are online. This window will close automatically.</p>';
       var i=document.createElement('iframe');
       i.style.cssText='display:none';i.src=uaPath();
       document.body.appendChild(i);
@@ -119,11 +121,13 @@ document.addEventListener('DOMContentLoaded',function(){
 <p class="w">${esc(welcome)}</p>
 <div id="err" role="alert">$error</div>
 <form id="f" autocomplete="on">
-<label for="u">Username</label>
+<label for="u">ユーザー名</label>
+<span class="sublabel">Username</span>
 <input id="u" name="username" type="text" autocapitalize="off" autocorrect="off" required autofocus>
-<label for="p">Password</label>
+<label for="p">パスワード</label>
+<span class="sublabel">Password</span>
 <input id="p" name="password" type="password" autocomplete="current-password" required>
-<button id="b" type="submit">Sign in</button>
+<button id="b" type="submit">ログイン / Sign in</button>
 </form>
 <p class="hint">Access is granted per device and lasts until you sign out or the portal is stopped.</p>
 </div>
@@ -133,8 +137,8 @@ document.addEventListener('DOMContentLoaded',function(){
 <div id="formwrap">
 <div class="strip"></div>
 <img class="mark" src="/logo.png" width="96" height="96" alt="">
-<p class="ok">Connected</p>
-<p class="w">Signed in as <strong>${esc(user)}</strong>. This window will close automatically.</p>
+<p class="ok">接続しました</p>
+<p class="oks">Signed in as <strong>${esc(user)}</strong>. This window will close automatically.</p>
 <iframe style="display:none" src="/generate_204"></iframe>
 </div>
 """

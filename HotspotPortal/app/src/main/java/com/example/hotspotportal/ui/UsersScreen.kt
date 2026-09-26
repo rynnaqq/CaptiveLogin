@@ -41,7 +41,9 @@ import com.example.hotspotportal.R
 import com.example.hotspotportal.store.PortalUserEntity
 import com.example.hotspotportal.ui.theme.BrutalButton
 import com.example.hotspotportal.ui.theme.Danger
+import com.example.hotspotportal.ui.theme.Go
 import com.example.hotspotportal.ui.theme.Ink
+import com.example.hotspotportal.ui.theme.LabelText
 import com.example.hotspotportal.ui.theme.Ocean
 import com.example.hotspotportal.ui.theme.PanelTint
 import com.example.hotspotportal.ui.theme.PopPink
@@ -81,7 +83,8 @@ fun UsersScreen(vm: PortalViewModel) {
                     color = Ink,
                 )
                 BrutalButton(
-                    text = stringResource(R.string.new_user),
+                    jp = stringResource(R.string.jp_new_user),
+                    en = stringResource(R.string.new_user),
                     onClick = { creating = true },
                     modifier = Modifier.fillMaxWidth(),
                     fill = PopPink,
@@ -92,7 +95,8 @@ fun UsersScreen(vm: PortalViewModel) {
     } else {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             BrutalButton(
-                text = stringResource(R.string.new_user),
+                jp = stringResource(R.string.jp_new_user),
+                en = stringResource(R.string.new_user),
                 onClick = { creating = true },
                 modifier = Modifier.fillMaxWidth(),
                 fill = PopPink,
@@ -192,14 +196,17 @@ private fun UserRow(
         }
         Box(
             Modifier
-                .background(if (user.enabled) Ocean else Danger)
+                .background(if (user.enabled) Go else Danger)
                 .border(BorderStroke(2.dp, Ink), RectangleShape)
                 .padding(horizontal = 8.dp, vertical = 2.dp),
         ) {
-            Text(
-                text = stringResource(if (user.enabled) R.string.enabled else R.string.disable),
-                style = MaterialTheme.typography.labelSmall,
-                color = White,
+            LabelText(
+                jp = stringResource(if (user.enabled) R.string.jp_enabled else R.string.jp_disable),
+                en = stringResource(if (user.enabled) R.string.enabled else R.string.disable),
+                jpStyle = MaterialTheme.typography.labelSmall,
+                enStyle = MaterialTheme.typography.labelSmall,
+                jpColor = White,
+                enColor = White,
             )
         }
         Text(

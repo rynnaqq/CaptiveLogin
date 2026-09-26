@@ -6,7 +6,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -25,6 +27,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -58,6 +61,9 @@ val PopPink = Color(0xFFFF2D95)
 
 /** Rare tertiary. Ink text on it, which is the only pairing that stays readable. */
 val PopLemon = Color(0xFFFFD400)
+
+/** Live state. 5.1:1 against white, so the label on it clears AA. */
+val Go = Color(0xFF1B7F3B)
 
 val PanelTint = Color(0xFFE6F4FB)
 val Mist = Color(0xFFF6FAFD)
@@ -179,6 +185,30 @@ fun Modifier.brutalPanel(
     .border(BorderStroke(strokeWidth, stroke), RectangleShape)
 
 /**
+ * A label with Japanese as the primary voice and English underneath, small.
+ *
+ * Used for every short label in the app so the Japanese reads first and the
+ * English is still there as a gloss. Long sentences are not routed through this -
+ * stacking a two-line sentence under its own translation is just clutter.
+ */
+@Composable
+fun LabelText(
+    jp: String,
+    en: String,
+    modifier: Modifier = Modifier,
+    jpStyle: TextStyle = MaterialTheme.typography.titleSmall,
+    enStyle: TextStyle = MaterialTheme.typography.labelSmall,
+    jpColor: Color = MaterialTheme.colorScheme.onSurface,
+    enColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    maxLines: Int = Int.MAX_VALUE,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(text = jp, style = jpStyle, color = jpColor, maxLines = maxLines)
+        Text(text = en, style = enStyle, color = enColor, maxLines = maxLines)
+    }
+}
+
+/**
  * A chunky tappable block that sinks into its own shadow when pressed.
  *
  * The shadow lives on an outer box that never moves while the inner block slides
@@ -190,12 +220,13 @@ fun Modifier.brutalPanel(
  */
 @Composable
 fun BrutalButton(
-    text: String,
+    jp: String,
+    en: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     fill: Color = MaterialTheme.colorScheme.primary,
     contentColor: Color = MaterialTheme.colorScheme.onPrimary,
-    height: Dp = 56.dp,
+    height: Dp = 64.dp,
     enabled: Boolean = true,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -223,10 +254,14 @@ fun BrutalButton(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelLarge,
-                color = contentColor,
+            LabelText(
+                jp = jp,
+                en = en,
+                jpStyle = MaterialTheme.typography.titleMedium,
+                enStyle = MaterialTheme.typography.labelMedium,
+                jpColor = contentColor,
+                enColor = contentColor,
+                maxLines = 1,
             )
         }
     }

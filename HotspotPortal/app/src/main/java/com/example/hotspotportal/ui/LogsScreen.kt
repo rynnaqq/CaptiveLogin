@@ -47,7 +47,10 @@ fun LogsScreen(vm: PortalViewModel) {
     val fmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
 
     if (logs.isEmpty()) {
-        EmptyState(stringResource(R.string.logs_empty))
+        EmptyState(
+            jp = stringResource(R.string.jp_logs_empty),
+            en = stringResource(R.string.logs_empty),
+        )
         return
     }
 

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -30,7 +33,9 @@ import com.example.hotspotportal.R
 import com.example.hotspotportal.service.PortalState
 import com.example.hotspotportal.ui.theme.BrutalButton
 import com.example.hotspotportal.ui.theme.Danger
+import com.example.hotspotportal.ui.theme.Go
 import com.example.hotspotportal.ui.theme.Ink
+import com.example.hotspotportal.ui.theme.LabelText
 import com.example.hotspotportal.ui.theme.Navy
 import com.example.hotspotportal.ui.theme.Ocean
 import com.example.hotspotportal.ui.theme.PanelTint
@@ -85,7 +90,7 @@ private fun BrandedHeader() {
  * which with the heavy borders read as noise rather than character.
  */
 @Composable
-private fun SectionLabel(english: String) {
+private fun SectionLabel(jp: String, en: String) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -97,13 +102,11 @@ private fun SectionLabel(english: String) {
                 .background(PopPink)
                 .border(BorderStroke(2.dp, Ink), RectangleShape),
         )
-        Text(
-            text = english,
-            style = MaterialTheme.typography.titleSmall,
-            color = Ink,
-        )
+        LabelText(jp = jp, en = en)
     }
 }
+
+private data class Status(val jpRes: Int, val en: String, val fill: Color, val ink: Color)
 
 @Composable
 fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
@@ -117,17 +120,22 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // Every label now carries an English gloss underneath, which made the
+            // screen taller than the viewport. Without this the column silently
+            // clips and the Activate/Stop button - the primary action - falls off
+            // the bottom and cannot be reached at all.
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         BrandedHeader()
 
         // The one thing the admin looks at first. Fill carries the state, so it
-        // reads from across the room: ocean live, lemon waiting, white idle.
-        val (statusFill, statusInk) = when (dash.portalState) {
-            PortalState.ACTIVE -> Ocean to White
-            PortalState.ARMED -> PopLemon to Ink
-            else -> White to Ink
+        // reads from across the room: green live, lemon waiting, red stopped.
+        val (statusJp, statusEn, statusFill, statusInk) = when (dash.portalState) {
+            PortalState.ACTIVE -> Status(R.string.jp_portal_active, "ACTIVE", Go, White)
+            PortalState.ARMED -> Status(R.string.jp_portal_armed, "ARMED", PopLemon, Ink)
+            else -> Status(R.string.jp_portal_inactive, "INACTIVE", Danger, White)
         }
         Box(
             Modifier
@@ -137,9 +145,14 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = stringResource(if (active) R.string.portal_active else R.string.portal_inactive),
+                    text = statusEn,
                     style = MaterialTheme.typography.headlineSmall,
                     color = statusInk,
+                )
+                Text(
+                    text = stringResource(statusJp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (dash.portalState == PortalState.ARMED) Ink else statusInk,
                 )
                 Text(
                     // Only worth a second line when it says something the
@@ -165,19 +178,42 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SectionLabel(stringResource(R.string.network_label))
-            StatusRow(stringResource(R.string.root_available), dash.rootAvailable)
-            StatusRow("iptables", dash.iptablesAvailable)
+            SectionLabel(
+                jp = stringResource(R.string.jp_network),
+                en = stringResource(R.string.network_label),
+            )
+            StatusRow(
+                jp = stringResource(R.string.jp_root_available),
+                en = stringResource(R.string.root_available),
+                ok = dash.rootAvailable,
+            )
+            StatusRow(jp = "iptables", en = "iptables", ok = dash.iptablesAvailable)
             HorizontalDivider(thickness = 2.dp, color = Ink)
             val info = listOf(
-                stringResource(R.string.iface_label) to (dash.hotspot?.interfaceName ?: stringResource(R.string.unknown)),
-                stringResource(R.string.gateway_label) to (dash.hotspot?.gatewayIp ?: stringResource(R.string.unknown)),
-                stringResource(R.string.subnet_label) to (dash.hotspot?.cidr ?: stringResource(R.string.unknown)),
-                stringResource(R.string.ssid_label) to (dash.hotspot?.ssid ?: stringResource(R.string.unknown)),
-            ).filter { it.second.isNotEmpty() }
-            info.forEachIndexed { i, (label, value) ->
+                Triple(
+                    stringResource(R.string.jp_iface),
+                    stringResource(R.string.iface_label),
+                    dash.hotspot?.interfaceName ?: stringResource(R.string.unknown),
+                ),
+                Triple(
+                    stringResource(R.string.jp_gateway),
+                    stringResource(R.string.gateway_label),
+                    dash.hotspot?.gatewayIp ?: stringResource(R.string.unknown),
+                ),
+                Triple(
+                    stringResource(R.string.jp_subnet),
+                    stringResource(R.string.subnet_label),
+                    dash.hotspot?.cidr ?: stringResource(R.string.unknown),
+                ),
+                Triple(
+                    stringResource(R.string.jp_ssid),
+                    stringResource(R.string.ssid_label),
+                    dash.hotspot?.ssid ?: stringResource(R.string.unknown),
+                ),
+            ).filter { it.third.isNotEmpty() }
+            info.forEachIndexed { i, row ->
                 if (i > 0) HorizontalDivider(thickness = 1.dp, color = Ink)
-                InfoRow(label, value)
+                InfoRow(jp = row.first, en = row.second, value = row.third)
             }
         }
 
@@ -185,11 +221,13 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             MetricCard(
                 Modifier.weight(1f),
+                stringResource(R.string.jp_connected_devices),
                 stringResource(R.string.connected_devices),
                 dash.clientCount.toString(),
             )
             MetricCard(
                 Modifier.weight(1f),
+                stringResource(R.string.jp_logged_in),
                 stringResource(R.string.logged_in_devices),
                 dash.loggedInCount.toString(),
             )
@@ -197,7 +235,8 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
 
         if (armed) {
             BrutalButton(
-                text = stringResource(R.string.stop_portal),
+                jp = stringResource(R.string.jp_stop_portal),
+                en = stringResource(R.string.stop_portal),
                 onClick = onStop,
                 modifier = Modifier.fillMaxWidth(),
                 fill = White,
@@ -205,7 +244,8 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
             )
         } else {
             BrutalButton(
-                text = stringResource(R.string.activate_portal),
+                jp = stringResource(R.string.jp_activate_portal),
+                en = stringResource(R.string.activate_portal),
                 onClick = { vm.activate() },
                 modifier = Modifier.fillMaxWidth(),
                 fill = PopPink,
@@ -216,53 +256,57 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
 }
 
 @Composable
-private fun StatusRow(label: String, ok: Boolean?) {
+private fun StatusRow(jp: String, en: String, ok: Boolean?) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = Ink)
+        LabelText(jp = jp, en = en)
         // A hard chip rather than a bare glyph: the tick has to survive being
         // glanced at, and a coloured square is the brutalist equivalent of a badge.
         val chipFill = when (ok) {
-            true -> Ocean
+            true -> Go
             false -> Danger
             null -> White
         }
         Box(
             Modifier
-                .size(24.dp)
                 .background(chipFill)
-                .border(BorderStroke(2.dp, Ink), RectangleShape),
+                .border(BorderStroke(2.dp, Ink), RectangleShape)
+                .padding(horizontal = 8.dp, vertical = 3.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = when (ok) {
+            LabelText(
+                jp = when (ok) {
+                    true -> stringResource(R.string.jp_ok)
+                    false -> stringResource(R.string.jp_no)
+                    null -> "—"
+                },
+                en = when (ok) {
                     true -> "OK"
                     false -> "NO"
                     null -> "--"
                 },
-                style = MaterialTheme.typography.labelSmall,
-                color = if (ok == null) Ink else White,
+                jpStyle = MaterialTheme.typography.labelSmall,
+                enStyle = MaterialTheme.typography.labelSmall,
+                jpColor = if (ok == null) Ink else White,
+                enColor = if (ok == null) Ink else White,
             )
         }
     }
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun InfoRow(jp: String, en: String, value: String) {
     Row(
         Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Ink,
-        )
+        LabelText(jp = jp, en = en)
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
@@ -272,7 +316,7 @@ private fun InfoRow(label: String, value: String) {
 }
 
 @Composable
-private fun MetricCard(modifier: Modifier, label: String, value: String) {
+private fun MetricCard(modifier: Modifier, jp: String, en: String, value: String) {
     Column(
         modifier
             .brutalPanel(fill = PanelTint)
@@ -284,10 +328,6 @@ private fun MetricCard(modifier: Modifier, label: String, value: String) {
             style = MaterialTheme.typography.headlineMedium,
             color = Ocean,
         )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Ink,
-        )
+        LabelText(jp = jp, en = en)
     }
 }

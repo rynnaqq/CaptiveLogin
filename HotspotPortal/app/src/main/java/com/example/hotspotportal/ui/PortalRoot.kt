@@ -30,19 +30,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hotspotportal.R
 import com.example.hotspotportal.ui.theme.Ink
+import com.example.hotspotportal.ui.theme.LabelText
 import com.example.hotspotportal.ui.theme.PopPink
 import com.example.hotspotportal.ui.theme.White
 import com.example.hotspotportal.ui.theme.brutalPanel
 
-private enum class Tab(val labelRes: Int, val icon: ImageVector) {
-    DASHBOARD(R.string.tab_dashboard, Icons.Filled.Dashboard),
-    CLIENTS(R.string.tab_clients, Icons.Filled.List),
-    USERS(R.string.tab_users, Icons.Filled.Person),
-    SETTINGS(R.string.tab_settings, Icons.Filled.Settings),
-    LOGS(R.string.tab_logs, Icons.Filled.Groups),
+private enum class Tab(val labelRes: Int, val jpRes: Int, val icon: ImageVector) {
+    DASHBOARD(R.string.tab_dashboard, R.string.jp_tab_dashboard, Icons.Filled.Dashboard),
+    CLIENTS(R.string.tab_clients, R.string.jp_tab_clients, Icons.Filled.List),
+    USERS(R.string.tab_users, R.string.jp_tab_users, Icons.Filled.Person),
+    SETTINGS(R.string.tab_settings, R.string.jp_tab_settings, Icons.Filled.Settings),
+    LOGS(R.string.tab_logs, R.string.jp_tab_logs, Icons.Filled.Groups),
 }
 
 @Composable
@@ -134,10 +136,17 @@ private fun NavItem(
                 modifier = Modifier.size(18.dp),
             )
         }
-        Text(
-            text = stringResource(tab.labelRes),
-            style = MaterialTheme.typography.labelSmall,
-            color = Ink,
+        // The screen is ~393dp wide, so each of the five items gets ~78dp.
+        // ダッシュボード is 7 glyphs and wraps at labelMedium, which pushed every
+        // English gloss onto a different baseline - hence the explicit sizes.
+        LabelText(
+            jp = stringResource(tab.jpRes),
+            en = stringResource(tab.labelRes),
+            jpStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            enStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+            jpColor = Ink,
+            enColor = Ink,
+            maxLines = 1,
         )
     }
 }
