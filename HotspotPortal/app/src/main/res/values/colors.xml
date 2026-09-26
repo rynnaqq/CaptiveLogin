@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#10131A</color>
+    <!-- Ocean blue primary, dark navy accent, white surface. -->
+    <color name="ocean_blue">#0077B6</color>
+    <color name="navy">#023E8A</color>
+    <color name="ocean_blue_dark">#005A8C</color>
+    <color name="ocean_tint">#E6F4FB</color>
+    <color name="surface_white">#FFFFFF</color>
+
+    <!-- Adaptive-icon background: a soft vertical ocean gradient so the icon
+         reads as branded rather than a flat swatch. -->
+    <color name="ic_launcher_background">#0077B6</color>
 </resources>

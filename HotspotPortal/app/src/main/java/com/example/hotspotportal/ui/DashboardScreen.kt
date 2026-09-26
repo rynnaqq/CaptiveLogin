@@ -1,5 +1,7 @@
 package com.example.hotspotportal.ui
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -18,12 +22,56 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
 import com.example.hotspotportal.service.PortalState
+
+/**
+ * The app's identity strip: the mark on an ocean-blue field with the name, so
+ * the brand is on screen rather than only in the launcher.
+ */
+@Composable
+private fun BrandedHeader(active: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_rimuru),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(2.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Text(
+                text = stringResource(if (active) R.string.portal_active else R.string.portal_inactive),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
 
 @Composable
 fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
@@ -41,6 +89,8 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        BrandedHeader(active)
+
         // Status card: the one thing the admin looks at first.
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -51,11 +101,14 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
                     color = if (active) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
+                    // Only worth a second line when it says something the
+                    // headline does not; "Portal inactive" twice is noise.
                     text = when (dash.portalState) {
-                        PortalState.STOPPED -> stringResource(R.string.portal_inactive)
+                        PortalState.STOPPED -> stringResource(R.string.dashboard_idle_hint)
                         PortalState.ARMED -> stringResource(R.string.waiting_hotspot)
                         PortalState.ERROR -> stringResource(R.string.err_setup_failed, "setup")
-                        PortalState.ACTIVE -> stringResource(R.string.hotspot_ready)
+                        PortalState.ACTIVE -> dash.hotspot?.ssid
+                            ?: stringResource(R.string.hotspot_ready)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

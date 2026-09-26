@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.HotspotPortal" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowBackground">@android:color/background_dark</item>
+    <!--
+      The window background is the loading screen: the mark on white, held
+      until the first Compose frame replaces it. A light status bar keeps the
+      ocean-blue accent legible against it.
+    -->
+    <style name="Theme.RimuruPortal" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">@color/surface_white</item>
+        <item name="android:navigationBarColor">@color/surface_white</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

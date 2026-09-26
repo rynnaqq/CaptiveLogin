@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">HotspotPortal</string>
+    <string name="app_name">Rimuru Portal</string>
+    <string name="dashboard_idle_hint">Turn on your hotspot, then activate the portal to require a sign-in.</string>
 
     <!-- Navigation -->
     <string name="tab_dashboard">Dashboard</string>

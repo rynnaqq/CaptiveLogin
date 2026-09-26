@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shown by the system between the launcher tap and the first Compose frame:
+     the mark on an ocean-blue field. No extra dependency needed, the themed
+     windowBackground is the splash. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/surface_white" />
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/ic_rimuru" />
+    </item>
+</layer-list>

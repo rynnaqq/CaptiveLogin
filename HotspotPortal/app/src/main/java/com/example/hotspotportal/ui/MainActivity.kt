@@ -8,7 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.example.hotspotportal.ui.theme.HotspotPortalTheme
+import com.example.hotspotportal.ui.theme.RimuruPortalTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         askForNotifications()
         setContent {
-            HotspotPortalTheme {
+            RimuruPortalTheme {
                 PortalRoot()
             }
         }
