@@ -14,9 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
+import com.example.hotspotportal.ui.theme.BrutalAction
+import com.example.hotspotportal.ui.theme.BrutalSwitch
 import com.example.hotspotportal.ui.theme.Ink
 import com.example.hotspotportal.ui.theme.LabelText
 import com.example.hotspotportal.ui.theme.PopPink
@@ -74,9 +74,14 @@ fun SettingsScreen(vm: PortalViewModel) {
             ToggleRow(stringResource(R.string.jp_debug_logging), stringResource(R.string.debug_logging), cfg.debugLogging) { vm.setDebugLogging(it) }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp), thickness = 2.dp, color = Ink)
-            OutlinedButton(onClick = { vm.rebuildRules() }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.jp_reset_rules))
-            }
+            BrutalAction(
+                jp = stringResource(R.string.jp_reset_rules),
+                en = stringResource(R.string.reset_all_rules),
+                onClick = { vm.rebuildRules() },
+                modifier = Modifier.fillMaxWidth(),
+                fill = PopPink,
+                contentColor = White,
+            )
         }
 
         SettingsCard(
@@ -169,6 +174,6 @@ private fun ToggleRow(jp: String, en: String, checked: Boolean, onChange: (Boole
             jpColor = Ink,
             enColor = Ink,
         )
-        Switch(checked = checked, onCheckedChange = onChange)
+        BrutalSwitch(checked = checked, onToggle = { onChange(!checked) })
     }
 }

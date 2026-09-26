@@ -39,7 +39,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
 import com.example.hotspotportal.store.PortalUserEntity
+import com.example.hotspotportal.ui.theme.BrutalAction
 import com.example.hotspotportal.ui.theme.BrutalButton
+import com.example.hotspotportal.ui.theme.BrutalSwitch
 import com.example.hotspotportal.ui.theme.Danger
 import com.example.hotspotportal.ui.theme.Go
 import com.example.hotspotportal.ui.theme.Ink
@@ -102,9 +104,17 @@ fun UsersScreen(vm: PortalViewModel) {
                 fill = PopPink,
                 contentColor = White,
             )
-            TextButton(onClick = { verifying = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.verify_credentials))
-            }
+            // White, not pink: "New user" above is the primary action on this
+            // screen. Two identical pink blocks side by side leaves the eye with
+            // no idea which one matters.
+            BrutalAction(
+                jp = stringResource(R.string.jp_verify),
+                en = stringResource(R.string.verify_credentials),
+                onClick = { verifying = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            )
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(top = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -192,7 +202,7 @@ private fun UserRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(user.username, style = MaterialTheme.typography.titleMedium, color = Ink)
-            Switch(checked = user.enabled, onCheckedChange = { onToggle() })
+            BrutalSwitch(checked = user.enabled, onToggle = onToggle)
         }
         Box(
             Modifier
@@ -218,10 +228,27 @@ private fun UserRow(
             style = MaterialTheme.typography.bodySmall,
             color = Ink,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = onEdit) { Text(stringResource(R.string.edit_user)) }
-            TextButton(onClick = onCopy) { Text(stringResource(R.string.copy_credentials)) }
-            TextButton(onClick = onDelete) { Text(stringResource(R.string.delete), color = Danger) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BrutalAction(
+                jp = stringResource(R.string.jp_edit_user),
+                en = stringResource(R.string.edit_user),
+                onClick = onEdit,
+                modifier = Modifier.weight(1f),
+            )
+            BrutalAction(
+                jp = stringResource(R.string.jp_copy_credentials),
+                en = stringResource(R.string.copy_credentials),
+                onClick = onCopy,
+                modifier = Modifier.weight(1f),
+            )
+            BrutalAction(
+                jp = stringResource(R.string.jp_delete),
+                en = stringResource(R.string.delete),
+                onClick = onDelete,
+                modifier = Modifier.weight(1f),
+                fill = Danger,
+                contentColor = White,
+            )
         }
     }
 }

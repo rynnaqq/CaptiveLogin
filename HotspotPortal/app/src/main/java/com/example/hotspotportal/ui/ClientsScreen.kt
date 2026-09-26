@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
 import com.example.hotspotportal.clients.ObservedClient
+import com.example.hotspotportal.ui.theme.BrutalAction
 import com.example.hotspotportal.ui.theme.Danger
 import com.example.hotspotportal.ui.theme.Go
 import com.example.hotspotportal.ui.theme.Ink
@@ -148,10 +149,14 @@ private fun ClientRow(client: ObservedClient, onKick: () -> Unit) {
 
         if (client.authorized) {
             HorizontalDivider(thickness = 2.dp, color = Ink)
-            TextButton(
+            BrutalAction(
+                jp = stringResource(R.string.jp_kick),
+                en = stringResource(R.string.action_kick),
                 onClick = onKick,
-                contentPadding = PaddingValues(0.dp),
-            ) { Text(stringResource(R.string.action_kick), color = Danger) }
+                modifier = Modifier.fillMaxWidth(),
+                fill = Danger,
+                contentColor = White,
+            )
         }
     }
 }

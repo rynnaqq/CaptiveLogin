@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hotspotportal.R
+import com.example.hotspotportal.ui.theme.BrutalAction
 import com.example.hotspotportal.ui.theme.Danger
 import com.example.hotspotportal.ui.theme.Ink
 import com.example.hotspotportal.ui.theme.White
@@ -59,20 +60,24 @@ fun LogsScreen(vm: PortalViewModel) {
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TextButton(
+            BrutalAction(
+                jp = stringResource(R.string.jp_copy),
+                en = stringResource(R.string.copy_logs),
                 onClick = {
                     val text = logs.joinToString("\n") { "${fmt.format(Date(it.timestamp))} ${it.event} ${it.detail}" }
                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cm.setPrimaryClip(ClipData.newPlainText("portal-logs", text))
                 },
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(0.dp),
-            ) { Text(stringResource(R.string.copy_logs)) }
-            TextButton(
+            )
+            BrutalAction(
+                jp = stringResource(R.string.jp_clear),
+                en = stringResource(R.string.clear_logs),
                 onClick = { vm.clearLogs() },
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(0.dp),
-            ) { Text(stringResource(R.string.clear_logs), color = Danger) }
+                fill = Danger,
+                contentColor = White,
+            )
         }
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {

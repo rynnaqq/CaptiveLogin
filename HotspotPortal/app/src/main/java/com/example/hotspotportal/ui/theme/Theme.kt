@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -255,15 +258,55 @@ fun LabelText(
 }
 
 /**
- * A chunky tappable block that sinks into its own shadow when pressed.
+ * The shared press interaction: a hard offset block behind, and a face that
+ * slides down-right over it when held.
  *
- * The shadow lives on an outer box that never moves while the inner block slides
- * down-right by [Lift] and covers it - that is the whole effect, and it is why
- * the outer box reserves the lift as extra height.
- *
- * Used for primary actions only. Secondary actions stay as M3 buttons, which now
- * inherit 0dp corners from the theme.
+ * Shared by [BrutalButton] and [BrutalAction] because it is the one interaction
+ * the whole design rests on. The outer box never moves and reserves the lift as
+ * extra height, so the face can travel without clipping.
  */
+@Composable
+private fun BrutalPressable(
+    fill: Color,
+    ink: Color,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    height: Dp,
+    lift: Dp,
+    enabled: Boolean,
+    contentAlignment: Alignment,
+    content: @Composable () -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+
+    Box(
+        modifier = modifier
+            .height(height + lift)
+            .drawBehind {
+                val o = lift.toPx()
+                drawRect(color = Ink, topLeft = Offset(o, o), size = size)
+            },
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(x = if (pressed) lift else 0.dp, y = if (pressed) lift else 0.dp)
+                .background(if (enabled) fill else fill.copy(alpha = 0.35f))
+                .border(BorderStroke(2.dp, ink), RectangleShape)
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    enabled = enabled,
+                    onClick = onClick,
+                ),
+            contentAlignment = contentAlignment,
+            content = { content() },
+        )
+    }
+}
+
+/** A primary action: full-width chunky block, Japanese over English. */
 @Composable
 fun BrutalButton(
     jp: String,
@@ -275,40 +318,120 @@ fun BrutalButton(
     height: Dp = 64.dp,
     enabled: Boolean = true,
 ) {
+    BrutalPressable(
+        fill = fill,
+        ink = Ink,
+        onClick = onClick,
+        modifier = modifier,
+        height = height,
+        lift = Lift,
+        enabled = enabled,
+        contentAlignment = Alignment.Center,
+    ) {
+        LabelText(
+            jp = jp,
+            en = en,
+            jpStyle = MaterialTheme.typography.titleMedium,
+            enStyle = MaterialTheme.typography.labelMedium,
+            jpColor = contentColor,
+            enColor = contentColor,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * A secondary action: the same press behaviour, sized for a row of them.
+ *
+ * Replaces the M3 TextButton, which renders in default Material blue with no
+ * border and was the loudest leftover against the hard-edged panels.
+ */
+@Composable
+fun BrutalAction(
+    jp: String,
+    en: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    fill: Color = MaterialTheme.colorScheme.surface,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    enabled: Boolean = true,
+) {
+    BrutalPressable(
+        fill = fill,
+        ink = Ink,
+        onClick = onClick,
+        modifier = modifier,
+        height = 46.dp,
+        lift = 3.dp,
+        enabled = enabled,
+        contentAlignment = Alignment.Center,
+    ) {
+        LabelText(
+            jp = jp,
+            en = en,
+            jpStyle = MaterialTheme.typography.labelMedium,
+            enStyle = MaterialTheme.typography.labelSmall,
+            jpColor = contentColor,
+            enColor = contentColor,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * A square toggle that replaces the M3 Switch.
+ *
+ * The stock Switch is a rounded pill, and it was the last thing in the app
+ * breaking the all-sharp rule. The track is a hard-bordered block and the thumb
+ * is a square that slides between the two ends.
+ */
+@Composable
+fun BrutalSwitch(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
 
     Box(
         modifier = modifier
-            .height(height + Lift)
+            .width(SWITCH_W)
+            .height(SWITCH_H + 2.dp)
             .drawBehind {
-                val o = Lift.toPx()
+                val o = 2.dp.toPx()
                 drawRect(color = Ink, topLeft = Offset(o, o), size = size)
             },
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .offset(x = if (pressed) Lift else 0.dp, y = if (pressed) Lift else 0.dp)
-                .background(if (enabled) fill else fill.copy(alpha = 0.35f))
+                .width(SWITCH_W)
+                .height(SWITCH_H)
+                .offset(
+                    x = if (pressed) 2.dp else 0.dp,
+                    y = if (pressed) 2.dp else 0.dp,
+                )
+                .background(if (checked) PopLemon else White)
                 .border(BorderStroke(2.dp, Ink), RectangleShape)
                 .clickable(
                     interactionSource = interaction,
                     indication = null,
-                    enabled = enabled,
-                    onClick = onClick,
+                    onClick = onToggle,
                 ),
-            contentAlignment = Alignment.Center,
+            contentAlignment = Alignment.CenterStart,
         ) {
-            LabelText(
-                jp = jp,
-                en = en,
-                jpStyle = MaterialTheme.typography.titleMedium,
-                enStyle = MaterialTheme.typography.labelMedium,
-                jpColor = contentColor,
-                enColor = contentColor,
-                maxLines = 1,
+            Box(
+                Modifier
+                    .padding(horizontal = 3.dp)
+                    .offset(x = if (checked) SWITCH_W - SWITCH_THUMB - 6.dp else 0.dp)
+                    .size(SWITCH_THUMB)
+                    .background(if (checked) Ink else PanelTint)
+                    .border(BorderStroke(2.dp, Ink), RectangleShape),
             )
         }
     }
 }
+
+private val SWITCH_W = 54.dp
+private val SWITCH_H = 30.dp
+private val SWITCH_THUMB = 22.dp
