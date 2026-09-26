@@ -41,14 +41,26 @@ class HotspotDetector(
     private val _state = MutableStateFlow<HotspotState?>(null)
     val state: StateFlow<HotspotState?> = _state.asStateFlow()
 
-    // SPEC 5.1: match the OEM soft-AP interface names.
-    private val ifaceRegex = Regex("^(wlan1|wlan2|swlan0|swlan1|ap0|softap0|swlan\\d)$")
+    /**
+     * Soft-AP interface names, most specific first.
+     *
+     * `wlan0` is last on purpose: on MediaTek it carries station traffic, so
+     * it is only correct when the OEM genuinely puts the AP there - never
+     * preferred over a dedicated `ap*`/`swlan*` name.
+     */
+    private val ifacePriority = listOf(
+        "ap0", "ap1", "ap2",
+        "softap0", "softap1",
+        "swlan0", "swlan1", "swlan2", "swlan3",
+        "wlan1", "wlan2",
+        "wlan0",
+    )
 
     suspend fun refresh(): HotspotState? = withContext(Dispatchers.IO) {
         val override = ifaceOverride()?.takeIf { it.isNotBlank() }
         val found = override?.let { name ->
             parseIpv4(shell.exec(listOf("ip", "-4", "addr", "show", "dev", name)).stdout)
-                ?.let { HotspotState(name, it.first, it.second, readSsid()) }
+                ?.let { HotspotState(name, it.first, it.second, ssidFor(name)) }
         } ?: detectViaShell() ?: detectViaInterfaces()
         _state.value = found
         found
@@ -65,46 +77,47 @@ class HotspotDetector(
 
     private suspend fun detectViaShell(): HotspotState? {
         val out = shell.exec(listOf("ip", "-4", "addr", "show")).stdout
-        var current: String? = null
-        for (line in out.lineSequence()) {
-            val trimmed = line.trim()
-            if (trimmed.startsWith("inet ")) {
-                parseIpv4(current ?: return null)?.let { (ip, prefix) ->
-                    return HotspotState(current!!, ip, prefix, readSsid())
-                }
-            }
-            // "1234: name: <if> ..." — index 3 is the interface name.
-            val parts = trimmed.split(Regex("\\s+"))
-            if (parts.size >= 4 && parts[1] == ":" && parts[2].endsWith(":")) {
-                current = parts[3]
-            }
-        }
-        return null
+        val addrs = parseIfaceAddrs(out)
+        val pick = pickByPriority(addrs.keys) ?: return null
+        val (ip, prefix) = addrs.getValue(pick)
+        return HotspotState(pick, ip, prefix, ssidFor(pick))
     }
 
     /**
-     * No-root fallback for the name lookup only. Cannot read the address from
-     * procfs without a shell, so the IP still comes from the shell path.
-     * Prefix length is not available here — 24 is the Android hotspot default.
+     * No-root fallback for the name lookup only. Prefix length is not available
+     * here, so 24 - the Android hotspot default - is assumed.
      */
     private suspend fun detectViaInterfaces(): HotspotState? = withContext(Dispatchers.IO) {
-        val candidate = runCatching {
-            NetworkInterface.getNetworkInterfaces()
-                ?.toList()
-                ?.firstOrNull { ni ->
-                    ifaceRegex.matches(ni.name) && ni.isUp &&
-                        ni.inetAddresses.toList().any { it is Inet4Address }
+        val up = runCatching {
+            NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
+                .filter { it.isUp && it.inetAddresses.toList().any { a -> a is Inet4Address } }
+                .mapNotNull { ni ->
+                    val addr = ni.inetAddresses.toList().filterIsInstance<Inet4Address>().firstOrNull()
+                    addr?.hostAddress?.let { ni.name to (it to 24) }
                 }
-        }.getOrNull() ?: return@withContext null
+                .toMap()
+        }.getOrDefault(emptyMap())
 
-        val addr = candidate.inetAddresses.toList().filterIsInstance<Inet4Address>().firstOrNull()
-            ?: return@withContext null
-        HotspotState(
-            interfaceName = candidate.name,
-            gatewayIp = addr.hostAddress ?: return@withContext null,
-            prefixLength = 24,
-            ssid = readSsid(),
-        )
+        val pick = pickByPriority(up.keys) ?: return@withContext null
+        val (ip, prefix) = up.getValue(pick)
+        HotspotState(interfaceName = pick, gatewayIp = ip, prefixLength = prefix, ssid = ssidFor(pick))
+    }
+
+    /** Highest-priority candidate present, so the choice never depends on the
+     *  order `ip` or the JVM happened to enumerate interfaces in. */
+    private fun pickByPriority(names: Collection<String>): String? {
+        val present = names.map { it.substringBefore('@') }.toSet()
+        return ifacePriority.firstOrNull { it in present }
+    }
+
+    @Volatile private var ssidCache: Pair<String, String?>? = null
+
+    /** `dumpsys wifi` is a very large dump; read it only when the AP changes. */
+    private suspend fun ssidFor(iface: String): String? {
+        ssidCache?.takeIf { it.first == iface }?.let { return it.second }
+        val ssid = readSsid()
+        ssidCache = iface to ssid
+        return ssid
     }
 
     /** Best-effort SSID for the dashboard. Not every build exposes it. */
@@ -114,8 +127,37 @@ class HotspotDetector(
         return m?.groupValues?.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() && it != "<unknown ssid>" }
     }
 
-    private fun parseIpv4(output: String): Pair<String, Int>? {
-        val m = Regex("""inet (\d+\.\d+\.\d+\.\d+)/(\d+)""").find(output) ?: return null
-        return m.groupValues[1] to m.groupValues[2].toInt()
+    private fun parseIpv4(output: String): Pair<String, Int>? = parseIpv4Line(output)
+
+    companion object {
+        /**
+         * Interface name -> (ipv4, prefix) from `ip -4 addr show` output.
+         *
+         * The header is `16: ccmni2: <NOARP,UP,LOWER_UP> mtu 1500 ...` followed by
+         * an indented `inet 10.0.0.1/8`, so the name comes from the header and the
+         * address from the following lines. Splitting the header on whitespace
+         * cannot work: the name carries its own colon (`ccmni2:`), never a bare
+         * `:` in the second field.
+         */
+        fun parseIfaceAddrs(output: String): Map<String, Pair<String, Int>> {
+            val header = Regex("""^\d+:\s+([^:@\s]+)""")
+            val result = LinkedHashMap<String, Pair<String, Int>>()
+            var name: String? = null
+            for (line in output.lineSequence()) {
+                val h = header.find(line)
+                if (h != null) {
+                    name = h.groupValues[1]
+                    continue
+                }
+                val current = name ?: continue
+                parseIpv4Line(line)?.let { result[current] = it }
+            }
+            return result
+        }
+
+        private val inet = Regex("""inet (\d+\.\d+\.\d+\.\d+)/(\d+)""")
+
+        fun parseIpv4Line(line: String): Pair<String, Int>? =
+            inet.find(line)?.let { it.groupValues[1] to it.groupValues[2].toInt() }
     }
 }
