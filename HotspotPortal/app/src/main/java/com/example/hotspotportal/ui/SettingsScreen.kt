@@ -45,19 +45,6 @@ fun SettingsScreen(vm: PortalViewModel) {
             NumberField(stringResource(R.string.portal_footer), cfg.footer, { vm.setFooter(it) })
         }
 
-        SettingsCard(stringResource(R.string.session_summary, "session", "idle")) {
-            NumberField(
-                stringResource(R.string.session_duration),
-                cfg.sessionDurationHours.toString(),
-                { vm.setSessionHours(it.toIntOrNull() ?: 8) },
-            )
-            NumberField(
-                stringResource(R.string.idle_timeout),
-                cfg.idleTimeoutMinutes.toString(),
-                { vm.setIdleMinutes(it.toIntOrNull() ?: 30) },
-            )
-        }
-
         SettingsCard(stringResource(R.string.settings_advanced)) {
             NumberField(
                 stringResource(R.string.iface_override),

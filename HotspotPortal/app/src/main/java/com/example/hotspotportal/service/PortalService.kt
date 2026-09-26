@@ -146,10 +146,7 @@ class PortalService : Service() {
 
             // Built outside runCatching so the session set stays reachable
             // for the monitor wiring below.
-            val sm = SessionManager(app.firewall, {
-                val s = app.settingsState.value
-                SessionManager.SessionConfig(s.sessionDurationMillis, s.idleMillis)
-            }) { e, d -> app.eventLog.record(e, d) }
+            val sm = SessionManager(app.firewall) { e, d -> app.eventLog.record(e, d) }
             sessions = sm
 
             val started = runCatching {
@@ -197,27 +194,18 @@ class PortalService : Service() {
             }
 
             _state.value = PortalState.ACTIVE
-            app.clientMonitor.onSessionsChanged { mac ->
-                val sess = sm.sessionFor(mac)
-                sess?.username to sess?.expiresAt
-            }
-            jobs += scope.launch { poll(sm) }
+            app.clientMonitor.onSessionsChanged { mac -> sm.sessionFor(mac)?.username }
+            jobs += scope.launch { poll() }
             return
         }
     }
 
-    private suspend fun poll(sm: SessionManager) {
+    private suspend fun poll() {
         while (currentCoroutineContext().isActive && armed) {
-            // probe = true: an entry the kernel is unsure about is actively
-            // checked, so a departed device stops counting as present and its
-            // session can finally idle out.
+            // Liveness is measured so the Clients list is honest about who is
+            // really here. Nothing revokes a session on a timer any more.
             app.clientMonitor.refresh(probe = true)
-            val present = app.clientMonitor.clients.value
-                .filter { it.info.present }
-                .map { it.info.mac }
-                .toSet()
-            present.forEach { sm.touch(it) }
-            sm.tick(present)
+            val present = app.clientMonitor.clients.value.count { it.info.present }
 
             if (!app.firewall.rulesIntact()) {
                 app.eventLog.error("rules_missing", "watchdog: jump rules vanished, reinstalling")
@@ -227,7 +215,7 @@ class PortalService : Service() {
                     runCatching { app.firewall.install(hs, cfg.httpPort, cfg.dnsPort, cfg.tlsPort) }
                 }
             }
-            updateNotification(present.size)
+            updateNotification(present)
             delay(60_000)
         }
     }

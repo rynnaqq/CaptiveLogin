@@ -90,11 +90,6 @@ fun DashboardScreen(vm: PortalViewModel, onStop: () -> Unit) {
             )
         }
 
-        InfoRow(
-            stringResource(R.string.session_summary, "${cfg.sessionDurationHours}h", "${cfg.idleTimeoutMinutes}m"),
-            "",
-        )
-
         Spacer(Modifier.height(4.dp))
 
         if (armed) {

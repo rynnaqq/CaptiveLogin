@@ -107,8 +107,6 @@ class LoginApi(
                         mapOf(
                             "status" to "ok",
                             "username" to user.username,
-                            "expiresAt" to session.expiresAt,
-                            "remainingSeconds" to ((session.expiresAt - System.currentTimeMillis()) / 1000),
                             // The OS closes its own window only when it sees the
                             // response it expects, and which probe that is
                             // depends on the client: Windows never asks
@@ -132,16 +130,9 @@ class LoginApi(
     fun status(mac: String?): ApiResponse.Ok {
         val session = mac?.let { sessions.sessionFor(it) }
             ?: return ApiResponse.Ok(json(mapOf("authorized" to false)))
-        val now = System.currentTimeMillis()
+        // A live session is authorized: there is no expiry to report.
         return ApiResponse.Ok(
-            json(
-                mapOf(
-                    "authorized" to !session.isExpired(now),
-                    "username" to session.username,
-                    "expiresAt" to session.expiresAt,
-                    "remainingSeconds" to ((session.expiresAt - now) / 1000),
-                )
-            )
+            json(mapOf("authorized" to true, "username" to session.username))
         )
     }
 

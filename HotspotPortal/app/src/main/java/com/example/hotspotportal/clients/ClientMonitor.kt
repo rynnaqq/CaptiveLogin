@@ -25,7 +25,6 @@ data class ClientInfo(
 data class ObservedClient(
     val info: ClientInfo,
     val username: String? = null,
-    val expiresAt: Long? = null,
 ) {
     val authorized: Boolean get() = username != null
 }
@@ -46,13 +45,13 @@ class ClientMonitor(private val shell: ShellRunner) {
 
     /** Live sessions, so the Clients tab can show who is logged in. */
     @Volatile
-    private var sessionLookup: (String) -> Pair<String?, Long?> = { null to null }
+    private var sessionLookup: (String) -> String? = { null }
 
     fun bind(iface: String) {
         this.iface = iface
     }
 
-    fun onSessionsChanged(lookup: (String) -> Pair<String?, Long?>) {
+    fun onSessionsChanged(lookup: (String) -> String?) {
         sessionLookup = lookup
     }
 
@@ -123,8 +122,7 @@ class ClientMonitor(private val shell: ShellRunner) {
         val previous = _clients.value.associateBy { it.info.mac }
         _clients.value = entries.map { c ->
             val state = mergeState(previous[c.mac]?.info?.state, c.state, probed)
-            val (user, exp) = sessionLookup(c.mac)
-            ObservedClient(c.copy(state = state), user, exp)
+            ObservedClient(c.copy(state = state), sessionLookup(c.mac))
         }
     }
 

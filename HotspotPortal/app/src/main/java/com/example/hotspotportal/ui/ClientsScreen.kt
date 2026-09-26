@@ -106,25 +106,12 @@ private fun ClientRow(client: ObservedClient, onKick: () -> Unit) {
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            client.expiresAt?.let { exp ->
-                val left = ((exp - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
-                Text(
-                    stringResource(R.string.time_remaining, formatDuration(left)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-            }
+
             if (client.authorized) {
                 TextButton(onClick = onKick) { Text(stringResource(R.string.action_kick)) }
             }
         }
     }
-}
-
-internal fun formatDuration(seconds: Long): String {
-    val h = TimeUnit.SECONDS.toHours(seconds)
-    val m = TimeUnit.SECONDS.toMinutes(seconds) % 60
-    return if (h > 0) "${h}h ${m}m" else "${m}m"
 }
 
 @Composable

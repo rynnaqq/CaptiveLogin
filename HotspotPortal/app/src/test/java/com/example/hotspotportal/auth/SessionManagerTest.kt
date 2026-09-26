@@ -7,12 +7,18 @@ import com.example.hotspotportal.root.ShellRunner
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Test 4 (spec 13): expiry and idle revoke remove exactly the right rules.
- * The clock is injected, so no sleeping.
+ * Sessions and their firewall rules.
+ *
+ * There is no expiry and no idle clock any more: a guest stays authorised until
+ * the admin kicks it, the account is disabled or deleted, or the portal stops.
+ * These cover what is left - that a login installs the rules, that a kick
+ * removes exactly that MAC's rules, that a stop clears everything, and that a
+ * session genuinely never expires on its own.
  */
 class SessionManagerTest {
 
@@ -28,10 +34,9 @@ class SessionManagerTest {
 
     private val shell = RecordingShell()
     private val firewall = FirewallManager(shell)
-    private val cfg = SessionManager.SessionConfig(durationMillis = 8 * 3600_000L, idleMillis = 30 * 60_000L)
     private val events = mutableListOf<String>()
 
-    private fun manager() = SessionManager(firewall, { cfg }) { event, _ -> events += event }
+    private fun manager() = SessionManager(firewall) { event, _ -> events += event }
 
     @Test
     fun `login installs both v4 and v6 rules`() = runTest {
@@ -41,51 +46,37 @@ class SessionManagerTest {
         assertTrue(shell.commands.any { it == FirewallCommands.allowMacV4("aa:bb:cc:dd:ee:01") })
         assertTrue(shell.commands.any { it == FirewallCommands.allowMacV6("aa:bb:cc:dd:ee:01") })
         assertTrue(sm.isAuthorized("aa:bb:cc:dd:ee:01"))
+        assertEquals("alice", sm.sessionFor("aa:bb:cc:dd:ee:01")?.username)
     }
 
     @Test
-    fun `expiry removes the rules for that MAC only`() = runTest {
+    fun `a kick removes that MAC's rules and nothing else`() = runTest {
         val sm = manager()
         sm.create("aa:bb:cc:dd:ee:01", "alice", "t1")
         sm.create("aa:bb:cc:dd:ee:02", "bob", "t2")
         shell.commands.clear()
 
-        // Sessions are stamped with real wall-clock time at creation, so the
-        // tick has to jump past their real expiry, not the synthetic `now`.
-        val realNow = System.currentTimeMillis()
-        sm.tick(
-            presentMacs = setOf("aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"),
-            now = realNow + cfg.durationMillis + 1,
-        )
+        sm.revoke("aa:bb:cc:dd:ee:01", "kicked")
 
         assertTrue(shell.commands.any { it == FirewallCommands.removeMacV4("aa:bb:cc:dd:ee:01") })
         assertTrue(shell.commands.any { it == FirewallCommands.removeMacV6("aa:bb:cc:dd:ee:01") })
-        // Both sessions expired at the same time — both must be removed.
-        assertTrue(shell.commands.any { it == FirewallCommands.removeMacV4("aa:bb:cc:dd:ee:02") })
-        assertEquals(0, sm.sessions.value.size)
+        assertFalse(shell.commands.any { it.contains("dd:ee:02") })
+        assertFalse(sm.isAuthorized("aa:bb:cc:dd:ee:01"))
+        assertTrue(sm.isAuthorized("aa:bb:cc:dd:ee:02"))
     }
 
     @Test
-    fun `idle revoke requires the MAC to be absent`() = runTest {
+    fun `a session never expires on its own`() = runTest {
         val sm = manager()
         sm.create("aa:bb:cc:dd:ee:01", "alice", "t1")
-        shell.commands.clear()
 
-        // Session stamps are real wall-clock time, so drive the tick from
-        // that rather than from the synthetic `now`.
-        val createdAt = System.currentTimeMillis()
-        val pastIdle = createdAt + cfg.idleMillis + 1
-
-        // Past the idle window, but the device is still on the network.
-        sm.tick(presentMacs = setOf("aa:bb:cc:dd:ee:01"), now = pastIdle)
-        assertTrue(shell.commands.isEmpty())
+        // Nothing in the manager is driven by a clock any more, so there is no
+        // waiting to do: the session is simply still authorised, and no
+        // firewall rule has been removed behind the admin's back.
+        val removals = shell.commands.filter { it.firstOrNull()?.contains("mac-source") == true && it.contains("-D") }
+        assertTrue(removals.isEmpty())
         assertTrue(sm.isAuthorized("aa:bb:cc:dd:ee:01"))
-
-        // Now it disappears: the full idle window has already passed.
-        shell.commands.clear()
-        sm.tick(presentMacs = emptySet(), now = pastIdle + 1)
-        assertTrue(shell.commands.any { it == FirewallCommands.removeMacV4("aa:bb:cc:dd:ee:01") })
-        assertFalse(sm.isAuthorized("aa:bb:cc:dd:ee:01"))
+        assertNull(sm.sessionFor("aa:bb:cc:dd:ee:02"))
     }
 
     @Test
@@ -96,6 +87,7 @@ class SessionManagerTest {
         shell.commands.clear()
 
         sm.revokeAll()
+
         assertEquals(0, sm.sessions.value.size)
         assertTrue(shell.commands.any { it == FirewallCommands.removeMacV4("aa:bb:cc:dd:ee:01") })
         assertTrue(shell.commands.any { it == FirewallCommands.removeMacV6("aa:bb:cc:dd:ee:02") })
@@ -109,5 +101,24 @@ class SessionManagerTest {
         sm.create("aa:bb:cc:dd:ee:03", "bob", "t3")
         assertEquals(2, sm.activeDeviceCount("alice"))
         assertEquals(1, sm.activeDeviceCount("bob"))
+    }
+
+    @Test
+    fun `logging in again on the same device does not consume a second slot`() = runTest {
+        val sm = manager()
+        sm.create("aa:bb:cc:dd:ee:01", "alice", "t1")
+        sm.create("aa:bb:cc:dd:ee:01", "alice", "t2")
+
+        assertEquals(1, sm.activeDeviceCount("alice"))
+    }
+
+    @Test
+    fun `login and revoke are logged for the admin`() = runTest {
+        val sm = manager()
+        sm.create("aa:bb:cc:dd:ee:01", "alice", "t1")
+        sm.revoke("aa:bb:cc:dd:ee:01", "kicked")
+
+        assertTrue(events.any { it == "login_ok" })
+        assertTrue(events.any { it == "session_end" })
     }
 }

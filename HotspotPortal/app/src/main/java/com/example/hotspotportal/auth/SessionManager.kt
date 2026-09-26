@@ -8,16 +8,14 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Owns the set of authorised devices and their firewall rules.
  *
- * Both the expiry clock and the idle clock live here so a session can never
- * outlive the rule that grants it, or the reverse.
+ * A session lives until it is revoked - by the admin, by the account being
+ * disabled or deleted, or by the portal stopping. There is no expiry and no
+ * idle timeout, so a connected guest is never disconnected automatically.
  */
 class SessionManager(
     private val firewall: FirewallManager,
-    private val config: () -> SessionConfig,
     private val onEvent: (String, String) -> Unit = { _, _ -> },
 ) {
-    data class SessionConfig(val durationMillis: Long, val idleMillis: Long)
-
     private val _sessions = MutableStateFlow<Map<String, PortalSession>>(emptyMap())
     val sessions: StateFlow<Map<String, PortalSession>> = _sessions.asStateFlow()
 
@@ -30,26 +28,16 @@ class SessionManager(
         _sessions.value.values.count { it.username.equals(username, ignoreCase = true) }
 
     suspend fun create(mac: String, username: String, token: String): PortalSession {
-        val now = System.currentTimeMillis()
         val session = PortalSession(
             mac = mac,
             username = username,
             token = token,
-            createdAt = now,
-            expiresAt = now + config().durationMillis,
-            lastSeenAt = now,
+            createdAt = System.currentTimeMillis(),
         )
         firewall.allowMac(mac)
         _sessions.value = _sessions.value + (mac to session)
         onEvent("login_ok", "$username from $mac")
         return session
-    }
-
-    /** Called when a client is seen on the network. Keeps it out of the idle bucket. */
-    fun touch(mac: String) {
-        _sessions.value[mac]?.let { s ->
-            _sessions.value = _sessions.value + (mac to s.copy(lastSeenAt = System.currentTimeMillis()))
-        }
     }
 
     suspend fun revoke(mac: String, reason: String) {
@@ -65,21 +53,5 @@ class SessionManager(
         _sessions.value = emptyMap()
         current.keys.forEach { firewall.removeMac(it) }
         onEvent("sessions_cleared", "${current.size} sessions removed ($reason)")
-    }
-
-    /**
-     * Ticks every 60s. STALE alone is not absence (spec gotcha 9) — the
-     * caller passes in which MACs are currently present, so a full idle
-     * window is required before anything is revoked.
-     */
-    suspend fun tick(presentMacs: Set<String>, now: Long = System.currentTimeMillis()) {
-        val cfg = config()
-        val expired = _sessions.value.values.filter { it.isExpired(now) }
-        expired.forEach { revoke(it.mac, "expired") }
-
-        val idle = _sessions.value.values.filter { it.isIdle(now, cfg.idleMillis) }
-        idle.forEach { s ->
-            if (s.mac !in presentMacs) revoke(s.mac, "idle")
-        }
     }
 }
