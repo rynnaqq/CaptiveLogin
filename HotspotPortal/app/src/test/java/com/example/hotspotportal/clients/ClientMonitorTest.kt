@@ -93,4 +93,45 @@ class ClientMonitorTest {
         assertNull(ClientMonitor.canonicalIp("example.com"))
         assertNull(ClientMonitor.canonicalIp(""))
     }
+
+    @Test
+    fun `one laptop with three addresses is one row, showing its IPv4`() {
+        val mac = "02:ea:30:f9:b8:3c"
+        val rows = listOf(
+            ObservedClient(ClientInfo("2400:9800:9b3:4e30:2dda:8879:749:4b71", mac, null, "STALE")),
+            ObservedClient(ClientInfo("2400:9800:9b3:4e30:407:1996:8c2a:787e", mac, null, "STALE")),
+            ObservedClient(ClientInfo("10.206.236.9", mac, null, "REACHABLE")),
+        )
+
+        val devices = groupByDevice(rows)
+
+        // Duplicate MACs in a LazyColumn are a fatal Compose error, and one
+        // guest shown three times is its own bug.
+        assertEquals(1, devices.size)
+        assertEquals("10.206.236.9", devices.single().info.ip)
+    }
+
+    @Test
+    fun `an IPv6-only device still gets a row`() {
+        val mac = "02:ea:30:f9:b8:3c"
+        val rows = listOf(
+            ObservedClient(ClientInfo("2400:9800:9b3:4e30:2dda:8879:749:4b71", mac, null, "STALE")),
+            ObservedClient(ClientInfo("2400:9800:9b3:4e30:407:1996:8c2a:787e", mac, null, "STALE")),
+        )
+
+        val devices = groupByDevice(rows)
+
+        assertEquals(1, devices.size)
+        assertEquals("2400:9800:9b3:4e30:2dda:8879:749:4b71", devices.single().info.ip)
+    }
+
+    @Test
+    fun `distinct devices stay separate`() {
+        val rows = listOf(
+            ObservedClient(ClientInfo("10.0.0.2", "aa:bb:cc:dd:ee:01", null, "REACHABLE")),
+            ObservedClient(ClientInfo("2400::2", "aa:bb:cc:dd:ee:02", null, "STALE")),
+        )
+
+        assertEquals(2, groupByDevice(rows).size)
+    }
 }

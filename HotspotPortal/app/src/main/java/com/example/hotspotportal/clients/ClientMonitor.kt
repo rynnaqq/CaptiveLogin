@@ -160,3 +160,21 @@ class ClientMonitor(private val shell: ShellRunner) {
         private val NUMERIC = Regex("""[0-9a-fA-F:.%]+""")
     }
 }
+
+/**
+ * One row per device, for display only.
+ *
+ * A MAC legitimately appears under several addresses - a laptop with an IPv4
+ * lease and two global IPv6 addresses is three neighbour entries - so the
+ * Clients list is grouped by MAC and the IPv4 entry wins where there is one,
+ * because that is the address an admin reads out to a guest. Ungrouped, one
+ * guest shows three rows and the LazyColumn is handed duplicate keys, which
+ * Compose treats as fatal.
+ *
+ * The monitor itself keeps every address: macFor() has to resolve whichever
+ * address the guest actually connected from, IPv6 included.
+ */
+fun groupByDevice(clients: List<ObservedClient>): List<ObservedClient> =
+    clients.groupBy { it.info.mac }.map { (_, rows) ->
+        rows.firstOrNull { ':' !in it.info.ip } ?: rows.first()
+    }

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.hotspotportal.PortalApp
 import com.example.hotspotportal.auth.AuthStore
 import com.example.hotspotportal.clients.ObservedClient
+import com.example.hotspotportal.clients.groupByDevice
 import com.example.hotspotportal.net.HotspotState
 import com.example.hotspotportal.service.PortalService
 import com.example.hotspotportal.service.PortalState
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -38,6 +40,8 @@ class PortalViewModel(app: Application) : AndroidViewModel(app) {
         userDao.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val logs = portalApp.eventLog.entries.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val clients: StateFlow<List<ObservedClient>> = portalApp.clientMonitor.clients
+        .map { groupByDevice(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _dashboard = MutableStateFlow(DashboardState())
     val dashboard: StateFlow<DashboardState> = _dashboard.asStateFlow()
@@ -50,9 +54,12 @@ class PortalViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             portalApp.clientMonitor.clients.collect { list ->
+                // Counted per device: one laptop with an IPv4 lease and two
+                // global IPv6 addresses is one guest, not three.
+                val devices = groupByDevice(list)
                 _dashboard.value = _dashboard.value.copy(
-                    clientCount = list.size,
-                    loggedInCount = list.count { it.authorized },
+                    clientCount = devices.size,
+                    loggedInCount = devices.count { it.authorized },
                 )
             }
         }
