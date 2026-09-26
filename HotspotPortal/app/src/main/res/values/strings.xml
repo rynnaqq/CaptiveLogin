@@ -57,7 +57,7 @@
          "no such user" from "wrong password" would let any guest on the LAN
          enumerate accounts. -->
     <string name="verify_credentials">Verify credentials</string>
-    <string name="verify_credentials_help">Passwords are stored as one-way BCrypt hashes, so they cannot be shown or recovered — a lost password is replaced, not read back. This checks a username and password pair and tells you which half is wrong.</string>
+    <string name="state_offline">Offline (%1$s) — not answering on the network</string>    <string name="verify_credentials_help">Passwords are stored as one-way BCrypt hashes, so they cannot be shown or recovered — a lost password is replaced, not read back. This checks a username and password pair and tells you which half is wrong.</string>
     <string name="verify">Check</string>
     <string name="close">Close</string>
     <string name="verdict_correct">Correct — this username and password will sign in.</string>

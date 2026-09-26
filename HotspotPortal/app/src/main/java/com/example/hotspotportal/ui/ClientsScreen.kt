@@ -95,6 +95,17 @@ private fun ClientRow(client: ObservedClient, onKick: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // Liveness is measured, not inferred: a row the kernel is no longer
+            // sure about has been probed, and a device that stopped answering is
+            // shown as offline instead of looking like a live guest whose timer
+            // is stuck.
+            if (!client.info.present) {
+                Text(
+                    stringResource(R.string.state_offline, client.info.state.lowercase()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
             client.expiresAt?.let { exp ->
                 val left = ((exp - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
                 Text(

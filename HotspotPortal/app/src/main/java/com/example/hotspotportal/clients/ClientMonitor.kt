@@ -56,21 +56,50 @@ class ClientMonitor(private val shell: ShellRunner) {
         sessionLookup = lookup
     }
 
-    suspend fun refresh() = withContext(Dispatchers.IO) {
+    /**
+     * Rebuilds the client list.
+     *
+     * [probe] actively checks entries the kernel is no longer sure about. It is
+     * on for the periodic poll and off for [macFor], which runs on every HTTP
+     * request and only needs the address-to-MAC mapping.
+     */
+    suspend fun refresh(probe: Boolean = false) = withContext(Dispatchers.IO) {
         val dev = iface ?: return@withContext
-        val entries = parseNeighbours(shell.exec(listOf("ip", "neigh", "show", "dev", dev)).stdout)
-        if (entries.isEmpty()) {
+        val parsed = parseNeighbours(shell.exec(listOf("ip", "neigh", "show", "dev", dev)).stdout)
+        if (parsed.isEmpty()) {
             val fallback = parseArp()
             if (fallback.isNotEmpty()) publish(fallback)
             return@withContext
         }
-        publish(entries)
+        publish(if (probe) parsed.map { verify(it) } else parsed)
+    }
+
+    /**
+     * Resolves an inconclusive neighbour entry by actually reaching the device.
+     *
+     * A STALE entry means the kernel has not heard from the device lately, not
+     * that it has gone - so STALE is still "present" (spec gotcha 9) and a
+     * sleeping but live guest is not dropped. The problem was the opposite: a
+     * departed device's entry sits at STALE for a long time, and because poll()
+     * touches every present MAC, that ghost entry kept refreshing its own idle
+     * timer, so the session could never idle out and the device stayed
+     * authorised indefinitely. So an inconclusive entry gets one ping, and only
+     * a failed probe counts as absence.
+     */
+    private suspend fun verify(c: ClientInfo): ClientInfo = when (c.state) {
+        "REACHABLE", "DELAY", "PROBE", "PERMANENT" -> c
+        else -> {
+            val alive = runCatching {
+                shell.exec(listOf("ping", "-c", "1", "-W", "1", c.ip)).ok
+            }.getOrDefault(false)
+            c.copy(state = if (alive) "REACHABLE" else "FAILED")
+        }
     }
 
     fun startPolling(scope: kotlinx.coroutines.CoroutineScope, intervalMs: Long = 10_000) {
         scope.launch(Dispatchers.IO) {
             while (currentCoroutineContext().isActive) {
-                refresh()
+                refresh(probe = true)
                 delay(intervalMs)
             }
         }

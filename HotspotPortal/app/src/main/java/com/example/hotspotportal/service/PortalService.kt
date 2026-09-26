@@ -208,7 +208,10 @@ class PortalService : Service() {
 
     private suspend fun poll(sm: SessionManager) {
         while (currentCoroutineContext().isActive && armed) {
-            app.clientMonitor.refresh()
+            // probe = true: an entry the kernel is unsure about is actively
+            // checked, so a departed device stops counting as present and its
+            // session can finally idle out.
+            app.clientMonitor.refresh(probe = true)
             val present = app.clientMonitor.clients.value
                 .filter { it.info.present }
                 .map { it.info.mac }
